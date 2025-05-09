@@ -3,6 +3,7 @@ import 'package:shc/appointment_page/appointment_page.dart';
 import 'package:shc/login_page/login_page.dart';
 import 'package:shc/home_page/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shc/forms/medical.dart';
 import 'package:shc/patient_page/medical_page.dart';
 
 class PatientsPage extends StatefulWidget {
@@ -181,7 +182,7 @@ class _PatientListPageState extends State<PatientsPage> {
                                       'Patients',
                                       style: TextStyle(
                                         fontSize: 15,
-                                        fontFamily: 'Bold',
+                                        fontFamily: 'OpenSansEB',
                                         fontWeight: FontWeight.bold,
                                         color: Color.fromARGB(255, 0, 0, 0),
                                       ),
@@ -244,7 +245,7 @@ class _PatientListPageState extends State<PatientsPage> {
                         ),
                       ],
                     ),
-                    SizedBox(width: screenWidth * 0.03),
+                    SizedBox(width: screenWidth * 0.05),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -354,6 +355,44 @@ class _PatientListPageState extends State<PatientsPage> {
                                   ),
                                 ),
                               ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Center(
+                                child: SizedBox(
+                                      width: screenWidth * 0.15,
+                                      height: screenHeight * 0.06,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.push(
+						context,
+						MaterialPageRoute(builder: (context) => MedicalRecord()),
+					);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color.fromRGBO(247, 198, 226, 1),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                            side: BorderSide(
+                                              color: Colors.green.shade900,
+                                              width: 2,
+                                            ), // Border
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Medical History Form',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                              )
                             ],
                           ),
                         ),

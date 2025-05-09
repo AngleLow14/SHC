@@ -173,7 +173,7 @@ class HeatMap extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(width: screenWidth * 0.03),
+                    SizedBox(width: screenWidth * 0.05),
                     Column(
                       children: [
                         Container(

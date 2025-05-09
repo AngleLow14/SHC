@@ -189,7 +189,7 @@ class _DashboardPageState extends State<Dashboard> {
                         ),
                       ],
                     ),
-                    SizedBox(width: screenWidth * 0.03),
+                    SizedBox(width: screenWidth * 0.05),
                     SingleChildScrollView(
                       child: Container(
                         color: Color.fromARGB(255, 255, 245, 245),
@@ -399,9 +399,9 @@ class _DashboardPageState extends State<Dashboard> {
                                                           screenHeight * 0.005,
                                                     ),
                                                     Image.asset(
-                                                      'assets/map/placement.png',
-                                                      height: screenHeight * 0.45,
-                                                      width: screenWidth * 0.33,
+                                                      'assets/icon/assessment.PNG',
+                                                      height: screenHeight * 0.42,
+                                                      width: screenWidth * 0.32,
                                                     ),
                                                   ],
                                                 ),

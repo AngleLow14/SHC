@@ -113,13 +113,13 @@ class _TreatmState extends State<Treatment> {
                 child:  Center(
                   child: Text(
                     '2 OUT OF 2',
-                    style: TextStyle(fontSize: 20, color: Colors.grey),
+                    style: TextStyle(fontSize: 20, color: Colors.grey, fontFamily: 'Italic'),
                   ),
                 ),
               ),
               Expanded(
                 child: Container(
-                  width: screenWidth,
+                  width: screenWidth * 0.78,
                   color: Colors.white,
                   child: SingleChildScrollView(
                     child: Padding(
@@ -128,10 +128,11 @@ class _TreatmState extends State<Treatment> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                            Text(
-                            'III. TREATMENT AND FOLLOW UP PLAN',
+                            'VI. TREATMENT AND FOLLOW UP PLAN',
                             style: TextStyle(
                               fontSize: 25,
                               fontWeight: FontWeight.bold,
+                              fontFamily: 'OpenSansEB',
                               color: Colors.black,
                             ),
                           ),
@@ -172,11 +173,11 @@ class _TreatmState extends State<Treatment> {
                                             children: [
                                               Expanded(
                                                 child: SizedBox(
-                                                  height: 30,
+                                                  height: screenHeight * 0.07,
                                                   child: TextField(
                                                     enabled: !isCheckedYes,
                                                     style: TextStyle(
-                                                      fontSize: 15,
+                                                      fontSize: 13,
                                                       color: Colors.black,
                                                     ),
                                                     decoration: InputDecoration(
@@ -224,10 +225,10 @@ class _TreatmState extends State<Treatment> {
                                             ),
                                           ),
                                           SizedBox(
-                                            height: 30,
+                                            height: screenHeight * 0.07,
                                             child: TextField(
                                               style:  TextStyle(
-                                                fontSize: 15,
+                                                fontSize: 13,
                                                 color: Colors.black,
                                               ),
                                               decoration: InputDecoration(

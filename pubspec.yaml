@@ -71,6 +71,10 @@ flutter:
     - family: Bold
       fonts:
         - asset: assets/font/OpenSans_Condensed-Bold.ttf
+    
+    - family: Italic
+      fonts:
+        - asset: assets/font/OpenSans_Condensed-LightItalic.ttf
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -109,3 +113,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
   assets:
     - assets/icon/shc.png
+    - assets/icon/assessment.PNG

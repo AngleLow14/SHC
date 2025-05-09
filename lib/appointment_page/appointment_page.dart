@@ -239,7 +239,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                       'Appointments',
                                       style: TextStyle(
                                         fontSize: 15,
-                                        fontFamily: 'Bold',
+                                        fontFamily: 'OpenSansEB',
                                         fontWeight: FontWeight.bold,
                                         color: Color.fromARGB(255, 0, 0, 0),
                                       ),
@@ -276,7 +276,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                         ),
                       ],
                     ),
-                    SizedBox(width: screenWidth * 0.03),
+                    SizedBox(width: screenWidth * 0.05),
                     Column(
   children: [
     Container(

@@ -37,7 +37,7 @@ class _PatientListPageState extends State<PatientsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MedicalHistoryPage(patientId: patientId),
+        builder: (context) => MedicalHistoryPage(),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:shc/patient_page/patient_page.dart';
+import 'package:shc/patient_page/medical_record.dart';
 import 'package:flutter/material.dart';
 
 class MedicalHistoryPage extends StatelessWidget {
@@ -138,7 +139,7 @@ class MedicalHistoryPage extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'February 28, 2004',
+                                'May 14, 2001',
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,

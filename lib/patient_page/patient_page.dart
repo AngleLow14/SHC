@@ -4,6 +4,7 @@ import 'package:shc/login_page/login_page.dart';
 import 'package:shc/home_page/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shc/forms/medical.dart';
+import 'package:intl/intl.dart';
 import 'package:shc/patient_page/medical_page.dart';
 
 class PatientsPage extends StatefulWidget {
@@ -12,35 +13,31 @@ class PatientsPage extends StatefulWidget {
 }
 
 class _PatientListPageState extends State<PatientsPage> {
-  final supabase = Supabase.instance.client;
-  List<dynamic> patients = [];
-  bool isLoading = true;
+ late Future<List<Map<String, dynamic>>> _patientsFuture;
 
   @override
   void initState() {
     super.initState();
-    fetchPatients();
+    _patientsFuture = _fetchPatients();
   }
 
-  Future<void> fetchPatients() async {
-    final response = await supabase
+  Future<List<Map<String, dynamic>>> _fetchPatients() async {
+    final response = await Supabase.instance.client
         .from('patient')
-        .select('patient_id, first_name, middle_name, last_name, civil_status, birthday');
+        .select('patient_id, patient_number, first_name, middle_name, last_name, civil_status, sex, birthday');
 
-    setState(() {
-      patients = response;
-      isLoading = false;
-    });
+    return (response as List).cast<Map<String, dynamic>>();
   }
 
-  void viewDetails(String patientId) {
+  void _viewDetails(String patientId) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MedicalHistoryPage(),
+        builder: (_) => MedicalHistoryPage(patientId: patientId),
       ),
     );
   }
+
 
   Widget _buildHeaderCell(String text) {
     return Center(
@@ -290,70 +287,80 @@ class _PatientListPageState extends State<PatientsPage> {
                               ),
                               SizedBox(height: screenHeight * 0.05),
                               Center(
-                                child: SizedBox(
-                                  width: screenWidth,
-                                  height:
-                                      screenHeight * 0.06 +
-                                      400, // adjust height if needed for scroll area
-                                  child: SizedBox(
-                                    height:
-                                        screenHeight *
-                                        0.6, // <-- Give a height constraint
-                                    child: SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  child: SingleChildScrollView(
-    scrollDirection: Axis.vertical,
-    child: isLoading
-        ? Center(child: CircularProgressIndicator())
-        : Table(
-            border: TableBorder.all(color: Colors.black),
-            columnWidths: {
-              0: FixedColumnWidth(screenWidth * 0.2),
-              1: FixedColumnWidth(screenWidth * 0.15),
-              2: FixedColumnWidth(screenWidth * 0.1),
-              3: FixedColumnWidth(screenWidth * 0.1),
-              4: FixedColumnWidth(screenWidth * 0.15),
-            },
-            children: [
-              // Header row
-              TableRow(
-                decoration: BoxDecoration(color: Colors.grey[300]),
-                children: [
-                  _buildHeaderCell('Patient ID'),
-                  _buildHeaderCell('Patient Name'),
-                  _buildHeaderCell('Birthday'),
-                  _buildHeaderCell('Civil Status'),
-                  _buildHeaderCell('Action'),
-                ],
-              ),
-              // Dynamic patient rows
-              ...patients.map((p) {
-                final fullName =
-                    '${p['first_name'] ?? ''} ${p['middle_name'] ?? ''} ${p['last_name'] ?? ''}'.trim();
+                                child: Container(
+          color: const Color.fromARGB(255, 255, 245, 245),
+          padding: const EdgeInsets.all(8.0),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _patientsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return Center(child: CircularProgressIndicator());
+              }
 
-                return TableRow(
-                  children: [
-                    _buildDataCell(p['patient_id'] ?? 'N/A'),
-                    _buildDataCell(fullName),
-                    _buildDataCell(p['birthday'] ?? 'N/A'),
-                    _buildDataCell(p['civil_status'] ?? 'N/A'),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ElevatedButton(
-                        onPressed: () => viewDetails(p['patient_id']),
-                        child: Text('View Details'),
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              final patients = snapshot.data ?? [];
+              if (patients.isEmpty) {
+                return Center(child: Text('No patients found.'));
+              }
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Table(
+                    border: TableBorder.all(color: Colors.black),
+                    columnWidths: {
+                      0: FixedColumnWidth(screenWidth * 0.1),
+                      1: FixedColumnWidth(screenWidth * 0.2),
+                      2: FixedColumnWidth(screenWidth * 0.1),
+                      3: FixedColumnWidth(screenWidth * 0.1),
+                      4: FixedColumnWidth(screenWidth * 0.15),
+                    },
+                    children: [
+                      TableRow(
+                        decoration: BoxDecoration(color: Colors.grey[300]),
+                        children: [
+                          _buildHeaderCell('Patient ID'),
+                          _buildHeaderCell('Patient Name'),
+                          _buildHeaderCell('Birthday'),
+                          _buildHeaderCell('Civil Status'),
+                          _buildHeaderCell('Action'),
+                        ],
                       ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ],
-          ),
-  ),
-),
+                      ...patients.map((p) {
+                        final fullName =
+                            '${p['first_name'] ?? ''} ${p['middle_name'] ?? ''} ${p['last_name'] ?? ''}'.trim();
+                        final birthday = p['birthday'] != null
+                            ? DateFormat('yyyy-MM-dd').format(DateTime.parse(p['birthday']))
+                            : 'N/A';
 
-                                  ),
-                                ),
+                        return TableRow(
+                          children: [
+                            _buildDataCell(p['patient_id']?.toString() ?? ''),
+                            _buildDataCell(fullName),
+                            _buildDataCell(birthday),
+                            _buildDataCell(p['civil_status']?.toString() ?? 'N/A'),
+
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ElevatedButton(
+                                onPressed: () => _viewDetails(p['patient_id']),
+                                child: Text('View Details'),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Center(

@@ -1,9 +1,10 @@
-import 'package:shc/patient_page/patient_page.dart';
 import 'package:flutter/material.dart';
 import 'package:shc/patient_page/medical_page.dart';
 
 class ViewDetails extends StatelessWidget{
-  const ViewDetails({super.key});
+ final String patientId;
+
+  const ViewDetails({Key? key, required this.patientId}) : super(key: key);
 
 @override
   Widget build(BuildContext context) {
@@ -994,7 +995,7 @@ class ViewDetails extends StatelessWidget{
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => MedicalHistoryPage()),
+                      MaterialPageRoute(builder: (context) => MedicalHistoryPage(patientId: patientId)),
                     );
                   },
                   style: ButtonStyle(

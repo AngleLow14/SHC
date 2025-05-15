@@ -1,9 +1,32 @@
 import 'package:shc/patient_page/patient_page.dart';
 import 'package:shc/patient_page/medical_record.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 class MedicalHistoryPage extends StatelessWidget {
-  const MedicalHistoryPage({super.key});
+final String patientId;
+
+  const MedicalHistoryPage({Key? key, required this.patientId}) : super(key: key);
+
+  Future<Map<String, dynamic>?> _fetchPatientInfo() async {
+    final response = await Supabase.instance.client
+        .from('patient')
+        .select()
+        .eq('patient_id', patientId)
+        .single();
+
+    return Map<String, dynamic>.from(response);
+  }
+
+  String _formatFullName(Map<String, dynamic> p) {
+    final first = p['first_name'] ?? '';
+    final middle = (p['middle_name'] ?? '').toString();
+    final last = p['last_name'] ?? '';
+    final suffix = (p['suffix'] ?? '').toString();
+    return '$first $middle $last $suffix'.trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     double responsiveSpacing = 20.0;
@@ -12,7 +35,24 @@ class MedicalHistoryPage extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: SafeArea(
-        child: Container(
+        child: FutureBuilder<Map<String, dynamic>?>(
+          future: _fetchPatientInfo(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData) {
+              return const Center(child: Text('Patient not found.'));
+            }
+
+            final p = snapshot.data!;
+            final fullName = _formatFullName(p);
+            final birthday = p['birthday'] != null
+                ? DateFormat('MMMM d, y').format(DateTime.parse(p['birthday']))
+                : 'N/A';
+        
+        return Container(
           color: const Color.fromARGB(255, 255, 242, 242),
           height: screenHeight * 1,
           width: screenWidth * 1,
@@ -80,7 +120,7 @@ class MedicalHistoryPage extends StatelessWidget {
                                     Column(
                                       children: [
                                         Text(
-                                    'Gene Jerrylene Arnigo Alvarez',
+                                    fullName,
                                     style: TextStyle(
                                       fontFamily: 'OpenSansEB',
                                       fontSize: 20,
@@ -139,7 +179,7 @@ class MedicalHistoryPage extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'May 14, 2001',
+                                birthday,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -190,9 +230,6 @@ class MedicalHistoryPage extends StatelessWidget {
                               ),
                                 ],
                               ),
-                              
-                              SizedBox(width: screenWidth * 0.07),
-                              
                             ],
                           ),
                             ],
@@ -458,7 +495,7 @@ class MedicalHistoryPage extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => ViewDetails(),
+                                          builder: (context) => ViewDetails(patientId: patientId,),
                                         ),
                                       );
                                     },
@@ -516,7 +553,7 @@ class MedicalHistoryPage extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => ViewDetails(),
+                                          builder: (context) => ViewDetails(patientId: patientId,),
                                         ),
                                       );
                                     },
@@ -555,7 +592,7 @@ class MedicalHistoryPage extends StatelessWidget {
               Center(
                 child: TextButton(
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => PatientsPage()),
                     );
@@ -578,7 +615,9 @@ class MedicalHistoryPage extends StatelessWidget {
               ),
             ],
           ),
-        ),
+        );
+          },
+      ),
       ),
     );
   }

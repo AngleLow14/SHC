@@ -306,7 +306,7 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
                 userAgentPackageName: 'com.example.heatmap',
               ),
               // Heat circles implemented with CircleLayer
-              CircleLayer(circles: _buildHeatCircles()),
+              MarkerLayer(markers: _buildHeatMarkers()),
             ],
           ),
           if (selectedArea != null) _buildInfoCard(),
@@ -316,57 +316,37 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
     );
   }
 
-  List<CircleMarker> _buildHeatCircles() {
-    final List<CircleMarker> circles = [];
+List<Marker> _buildHeatMarkers() {
+  final List<Marker> markers = [];
 
-    // Add heat circles for all areas with cases
-    for (var area in areasWithCases) {
-      final caseCount = area["cases"] as int;
-      final point = area["center"] as LatLng;
-      final color = getColorByCases(caseCount);
+  for (var area in areasWithCases) {
+    final point = area["center"] as LatLng;
+    final caseCount = area["cases"] as int;
+    final double iconSize = 70;
 
-      // Determine if it's a municipality or barangay
-      final isMunicipality = municipalities.any(
-        (m) => m["name"] == area["name"],
-      );
-
-      // Set different size scaling factors for municipalities vs barangays
-      // Municipalities get larger circles, barangays get smaller ones
-      final sizeFactor = isMunicipality ? 1.5 : 0.6;
-
-      // Create outer heat circle (gradient effect)
-      for (var i = 4; i >= 1; i--) {
-        // Calculate radius based on case count but with appropriate sizing
-        final radius = (caseCount / 100) * sizeFactor * 200 * math.sqrt(i) / 2;
-        final opacity = 0.7 / i;
-
-        circles.add(
-          CircleMarker(
-            point: point,
-            radius: radius,
-            useRadiusInMeter: true,
-            color: color.withOpacity(opacity),
-            borderColor: Colors.transparent,
-            borderStrokeWidth: 0,
-          ),
-        );
-      }
-
-      // Add inner circle for precise location
-      circles.add(
-        CircleMarker(
-          point: point,
-          radius:
-              isMunicipality ? 5 : 3, // Slightly larger dot for municipalities
-          color: Colors.white,
-          borderColor: color,
-          borderStrokeWidth: 2,
+    markers.add(
+      Marker(
+        point: point,
+        width: iconSize,
+        height: iconSize,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.location_pin,
+              color: getColorByCases(caseCount),
+              size: iconSize,
+            ),
+          ],
         ),
-      );
-    }
-
-    return circles;
+      ),
+    );
   }
+
+  return markers;
+}
+
+
 
   void _selectNearestArea(LatLng tappedPoint) {
     Map<String, dynamic>? nearest;

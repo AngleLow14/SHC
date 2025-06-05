@@ -84,6 +84,8 @@ class _TreatmState extends State<Treatment> {
         child: SizedBox(
           height: screenHeight,
           width: screenWidth,
+          child: Form(
+            key: _formKey,
           child: Column(
             children: <Widget>[
               Container(
@@ -113,16 +115,14 @@ class _TreatmState extends State<Treatment> {
               ),
               Expanded(
                 child: Container(
-                  width: screenWidth * 1,
+                  width: screenWidth * 0.78,
                   color: Colors.white,
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
-                        child: Form(
-                        key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
+                        children: [
                            Text(
                             'VI. TREATMENT AND FOLLOW UP PLAN',
                             style: TextStyle(
@@ -138,16 +138,15 @@ class _TreatmState extends State<Treatment> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               ListView.builder(
-                                physics: NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _prescriptionControllers.length,
                                 itemBuilder: (context, index) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                                     child: Row(
                                       children: [
-                                        SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
+                                        Expanded(
                                           child: TextFormField(
                                             controller: _prescriptionControllers[index],
                                             decoration: InputDecoration(
@@ -156,8 +155,7 @@ class _TreatmState extends State<Treatment> {
                                         ),
                                         SizedBox(width: screenWidth * 0.02),
                                         SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
+                                          
                                           child: TextFormField(
                                             controller: _quantityControllers[index],
                                             keyboardType: TextInputType.number,
@@ -165,9 +163,7 @@ class _TreatmState extends State<Treatment> {
                                           ),
                                         ),
                                         SizedBox(width: screenWidth * 0.02),
-                                        SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
+                                        Expanded(
                                           child: TextFormField(
                                             controller: _frequencyControllers[index],
                                             decoration: InputDecoration(labelText: 'Frequency'),
@@ -479,15 +475,13 @@ class _TreatmState extends State<Treatment> {
                                 ),
                         ],
                       ),
-                      ),
-                    ),
                     ),
                   ),
                 ),
-              
+              ),
             ],
           ),
-        
+        ),
         ),
       ),
     );

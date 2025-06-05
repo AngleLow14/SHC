@@ -5,6 +5,8 @@ import 'package:shc/patient_page/patient_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppointmentPage extends StatefulWidget {
+  const AppointmentPage({super.key});
+
   @override
   _AppointmentPageState createState() => _AppointmentPageState();
 }
@@ -37,7 +39,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    Widget _buildHeaderCell(String text) {
+    Widget buildHeaderCell(String text) {
       return Container(
         height: 50,
         alignment: Alignment.center,
@@ -53,7 +55,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
       );
     }
 
-    Widget _buildDataCell(String text) {
+    Widget buildDataCell(String text) {
       return Container(
         alignment: Alignment.center,
         color: Colors.white,
@@ -67,50 +69,6 @@ class _AppointmentPageState extends State<AppointmentPage> {
             color: Colors.black,
           ),
         ),
-      );
-    }
-
-    TableRow _buildHeaderRow() {
-      return TableRow(
-        children: [
-          _buildHeaderCell('Patient ID'),
-          _buildHeaderCell('Patient Name'),
-          _buildHeaderCell('Appointment'),
-          _buildHeaderCell('Date'),
-          _buildHeaderCell('Action'),
-        ],
-      );
-    }
-
-    TableRow _buildDataRow() {
-      return TableRow(
-        children: [
-          _buildDataCell('25-0023'),
-          _buildDataCell('Gene Jerrylene Arnigo Alvarez'),
-          _buildDataCell('New Patient'),
-          _buildDataCell('11-03-2024'),
-          Container(
-            alignment: Alignment.center,
-            color: Colors.white,
-            height: 50,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(
-                  Icons.check,
-                  size: 24,
-                  color: Color.fromARGB(255, 92, 230, 97),
-                ),
-                SizedBox(width: 20),
-                Icon(
-                  Icons.close,
-                  size: 24,
-                  color: Color.fromARGB(255, 226, 78, 78),
-                ),
-              ],
-            ),
-          ),
-        ],
       );
     }
 
@@ -340,27 +298,27 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             decoration:
                                 BoxDecoration(color: Colors.grey[300]),
                             children: [
-                              _buildHeaderCell('Patient ID'),
-                              _buildHeaderCell('Appointment Date'),
-                              _buildHeaderCell('Type'),
-                              _buildHeaderCell('Purpose'),
-                              _buildHeaderCell('Note'),
-                              _buildHeaderCell('Action'),
+                              buildHeaderCell('Patient ID'),
+                              buildHeaderCell('Appointment Date'),
+                              buildHeaderCell('Type'),
+                              buildHeaderCell('Purpose'),
+                              buildHeaderCell('Note'),
+                              buildHeaderCell('Action'),
                             ],
                           ),
                           // Dynamic Rows
                           ...appointments.map((appointment) {
                             return TableRow(
                               children: [
-                                _buildDataCell(
+                                buildDataCell(
                                     appointment['patient_id'] ?? 'N/A'),
-                                _buildDataCell(
+                                buildDataCell(
                                     appointment['appointment_date'] ?? 'N/A'),
-                                _buildDataCell(
+                                buildDataCell(
                                     appointment['type_of_patient'] ?? 'N/A'),
-                                _buildDataCell(
+                                buildDataCell(
                                     appointment['purpose'] ?? 'N/A'),
-                                _buildDataCell(appointment['note'] ?? 'N/A'),
+                                buildDataCell(appointment['note'] ?? 'N/A'),
                                 Container(
                                   alignment: Alignment.center,
                                   height: 50,
@@ -388,7 +346,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                 ),
                               ],
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),

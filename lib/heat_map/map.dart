@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
 
 class HeatMapApp extends StatelessWidget {
@@ -33,17 +34,17 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
     {
       "name": "San Buenaventura",
       "center": LatLng(14.117819846408196, 121.33079391353299),
-      "cases": 201,
+      "cases": 3,
     },
     {
       "name": "San Lorenzo",
       "center": LatLng(14.110606462445773, 121.35230882303901),
-      "cases": 401,
+      "cases": 1,
     },
     {
       "name": "Santo Angel",
       "center": LatLng(14.105403719124766, 121.36865013870252),
-      "cases": 601,
+      "cases": 4,
     },
     {
       "name": "San Mateo",
@@ -53,37 +54,37 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
     {
       "name": "Dolores",
       "center": LatLng(14.102789184168682, 121.33341376244512),
-      "cases": 200,
+      "cases": 5,
     },
     {
       "name": "San Marcos",
       "center": LatLng(14.103311365270002, 121.30303839144838),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "Santa Maria Magdalena",
       "center": LatLng(14.09630456398764, 121.31044797316588),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "San Pedro",
       "center": LatLng(14.093592182111163, 121.33584150524842),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "San Lucas 2",
       "center": LatLng(14.089829237862235, 121.32680348109213),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "San Juan",
       "center": LatLng(14.092725291883346, 121.29998731648094),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "San Diego",
       "center": LatLng(14.08868355986889, 121.36661070931122),
-      "cases": 0,
+      "cases": 1,
     },
     {
       "name": "Santa Isabel",
@@ -118,7 +119,7 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
     {
       "name": "Barangay VI-D",
       "center": LatLng(14.078976852964995, 121.32046687534452),
-      "cases": 100,
+      "cases": 0,
     },
     {
       "name": "Barangay V-A",
@@ -253,17 +254,17 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
   ];
 
   final List<Map<String, dynamic>> municipalities = [
-    {"name": "Alaminos", "center": LatLng(14.0708, 121.2467), "cases": 450},
-    {"name": "Rizal", "center": LatLng(14.1006, 121.3878), "cases": 890},
-    {"name": "Nagcarlan", "center": LatLng(14.1362, 121.4106), "cases": 320},
-    {"name": "Liliw", "center": LatLng(14.1351, 121.4326), "cases": 350},
-    {"name": "Majayjay", "center": LatLng(14.1444, 121.4703), "cases": 150},
-    {"name": "Calauan", "center": LatLng(14.1486, 121.3142), "cases": 680},
-    {"name": "Victoria", "center": LatLng(14.2136, 121.3250), "cases": 420},
-    {"name": "Tiaong", "center": LatLng(13.9612, 121.3257), "cases": 750},
-    {"name": "Dolores", "center": LatLng(14.0302, 121.3860), "cases": 210},
-    {"name": "Candelaria", "center": LatLng(13.9314, 121.4243), "cases": 820},
-    {"name": "San Pablo", "center": LatLng(14.0692, 121.3250), "cases": 0},
+    {"name": "Alaminos", "center": LatLng(14.0708, 121.2467), "cases": 1},
+    {"name": "Rizal", "center": LatLng(14.1006, 121.3878), "cases": 6},
+    {"name": "Nagcarlan", "center": LatLng(14.1362, 121.4106), "cases": 3},
+    {"name": "Liliw", "center": LatLng(14.1351, 121.4326), "cases": 2},
+    {"name": "Majayjay", "center": LatLng(14.1444, 121.4703), "cases": 9},
+    {"name": "Calauan", "center": LatLng(14.1486, 121.3142), "cases": 14},
+    {"name": "Victoria", "center": LatLng(14.2136, 121.3250), "cases": 3},
+    {"name": "Tiaong", "center": LatLng(13.9612, 121.3257), "cases": 5},
+    {"name": "Dolores", "center": LatLng(14.0302, 121.3860), "cases": 8},
+    {"name": "Candelaria", "center": LatLng(13.9314, 121.4243), "cases": 12},
+    {"name": "San Pablo", "center": LatLng(14.0692, 121.3250), "cases": 25},
   ];
 
   Map<String, dynamic>? selectedArea;
@@ -278,14 +279,16 @@ class _HeatMapScreenState extends State<HeatMapScreen> {
   }
 
   Color getColorByCases(int cases) {
-    if (cases < 200) return Colors.green;
-    if (cases < 400) return Colors.yellow;
-    if (cases < 600) return Colors.orange;
+    if (cases < 10) return Colors.green;
+    if (cases < 15) return Colors.yellow;
+    if (cases < 20) return Colors.orange;
     return Colors.red;
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       
       body: Stack(
@@ -322,7 +325,7 @@ List<Marker> _buildHeatMarkers() {
   for (var area in areasWithCases) {
     final point = area["center"] as LatLng;
     final caseCount = area["cases"] as int;
-    final double iconSize = 70;
+    final double iconSize = 45;
 
     markers.add(
       Marker(
@@ -474,20 +477,59 @@ List<Marker> _buildHeatMarkers() {
         color: Colors.white.withOpacity(0.95),
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                                                    child: SizedBox(
+                                                      height: MediaQuery.of(context).size.height * 0.1,
+                                                      width: MediaQuery.of(context).size.width * 0.1,
+                                                        child: PieChart(
+                                                          PieChartData(
+                                                            sectionsSpace: 1,
+                                                            centerSpaceRadius:
+                                                                20,
+                                                            sections: [
+                                                              PieChartSectionData(
+                                                                color:
+                                                                    Colors.green,
+                                                                value: 30,
+                                                                radius: 50,
+                                                              ),
+                                                              PieChartSectionData(
+                                                                color:
+                                                                    Colors.yellow,
+                                                                value: 20,
+                                                                radius: 50,
+                                                              ),
+                                                              PieChartSectionData(
+                                                                color:
+                                                                    Colors.orange,
+                                                                value: 20,
+                                                                radius: 50,
+                                                              ),
+                                                              PieChartSectionData(
+                                                                color:
+                                                                    Colors.red,
+                                                                value: 15,
+                                                                radius: 50,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                    ),
+                                                  ),
               Text(
                 "Heat Map Legend",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               SizedBox(height: 8),
-              IndicatorRow(color: Colors.green, label: "Low (<200 cases)"),
-              IndicatorRow(color: Colors.yellow, label: "Moderate (200-399)"),
-              IndicatorRow(color: Colors.orange, label: "High (400-599)"),
-              IndicatorRow(color: Colors.red, label: "Critical (600+)"),
+              IndicatorRow(color: Colors.green, label: "Low (<5 cases)"),
+              IndicatorRow(color: Colors.yellow, label: "Moderate (6-12)"),
+              IndicatorRow(color: Colors.orange, label: "High (13-19)"),
+              IndicatorRow(color: Colors.red, label: "Critical (20+)"),
               SizedBox(height: 8),
               Text(
                 "Note: Larger heat circles indicate higher case numbers",
@@ -501,9 +543,9 @@ List<Marker> _buildHeatMarkers() {
   }
 
   String _getStatusText(int cases) {
-    if (cases < 200) return "Low Risk (Normal Operations)";
-    if (cases < 400) return "Moderate Risk (Increased Monitoring)";
-    if (cases < 600) return "High Risk (Restrictions Recommended)";
+    if (cases < 5) return "Low Risk (Normal Operations)";
+    if (cases < 12) return "Moderate Risk (Increased Monitoring)";
+    if (cases < 19) return "High Risk (Restrictions Recommended)";
     return "Critical Risk (Lockdown Recommended)";
   }
 }

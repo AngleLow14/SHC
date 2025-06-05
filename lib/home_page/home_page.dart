@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shc/login_page/login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:shc/patient_page/patient_page.dart';
 import 'package:shc/appointment_page/appointment_page.dart';
 import 'package:shc/heat_map/heat_map.dart';
 
 class Dashboard extends StatefulWidget {
+  const Dashboard({super.key});
+
   @override
   _DashboardPageState createState() => _DashboardPageState();
 }
@@ -15,13 +16,120 @@ class _DashboardPageState extends State<Dashboard> {
   final supabase = Supabase.instance.client;
   int maleCount = 0;
   int femaleCount = 0;
+  int childrenCount = 0;
+  int youthCount = 0;
+  int adultCount = 0;
+  int seniorCount = 0;
+  int yesCount = 0;
   bool isLoading = true;
+  String? errorMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchSexDistribution();
+@override
+void initState() {
+  super.initState();
+  fetchSexDistribution();
+  fetchCivilStatusCounts();
+  fetchAndCategorizePatients();
+  fetchSTIHistory();
+}
+
+  int singleCount = 0;
+  int marriedCount = 0;
+  int annulledCount = 0;
+  int widowedCount = 0;
+  int liveInCount = 0;
+  int separatedCount = 0;
+  int otherCount = 0;
+
+  Future<void> fetchCivilStatusCounts() async {
+    try {
+      final response = await supabase
+          .from('patient')
+          .select('civil_status');
+
+      for (var record in response) {
+        final status = (record['civil_status'] ?? '').toString().toLowerCase();
+
+        switch (status) {
+          case 'single':
+            singleCount++;
+            break;
+          case 'married':
+            marriedCount++;
+            break;
+          case 'annulled':
+            annulledCount++;
+            break;
+          case 'widowed':
+            widowedCount++;
+            break;
+          case 'live-in':
+            liveInCount++;
+            break;
+          case 'separated':
+            separatedCount++;
+            break;
+          default:
+            otherCount++;
+            break;
+        }
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching civil status: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
+
+  Future<void> fetchAndCategorizePatients() async {
+    final supabase = Supabase.instance.client;
+
+    try {
+      final response = await supabase.from('patient').select('birthday');
+
+      int children = 0;
+      int youth = 0;
+      int adult = 0;
+      int senior = 0;
+
+      final today = DateTime.now();
+
+      for (final item in response) {
+        if (item['birthday'] == null) continue;
+        final birthday = DateTime.parse(item['birthday']);
+        final age = today.year - birthday.year - ((today.month < birthday.month || (today.month == birthday.month && today.day < birthday.day)) ? 1 : 0);
+
+        if (age <= 12) {
+          children++;
+        } else if (age <= 17) {
+          youth++;
+        } else if (age <= 59) {
+          adult++;
+        } else {
+          senior++;
+        }
+      }
+
+      setState(() {
+        childrenCount = children;
+        youthCount = youth;
+        adultCount = adult;
+        seniorCount = senior;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching patient data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
 
   Future<void> fetchSexDistribution() async {
     final data = await supabase
@@ -33,6 +141,40 @@ class _DashboardPageState extends State<Dashboard> {
       femaleCount = data.where((item) => item['sex'] == 'Female').length;
       isLoading = false;
     });
+  }
+
+  Future<void> fetchSTIHistory() async {
+    try {
+      final response = await supabase
+          .from('medical_history')
+          .select('sti_history')
+          .order('date', ascending: false)
+          .limit(1)
+          .single();
+
+      final stiHistory = response['sti_history'] as List<dynamic>?;
+
+      if (stiHistory != null) {
+        int count = stiHistory
+            .where((item) => item.toString().toLowerCase().contains('yes'))
+            .length;
+
+        setState(() {
+          yesCount = count;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = "No STI history found.";
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = "Failed to fetch data: $e";
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -245,7 +387,11 @@ class _DashboardPageState extends State<Dashboard> {
                                               height: screenHeight * 0.30,
                                               width: screenWidth * 0.16,
                                               color: Colors.white,
-                                              child: Column(
+                                              child: isLoading
+                                                ? const CircularProgressIndicator()
+                                                : errorMessage != null
+                                                    ? Text(errorMessage!, style: const TextStyle(color: Colors.red))
+                                                    :  Column(
                                                 children: [
                                                   SizedBox(
                                                     height: screenHeight * 0.02,
@@ -265,7 +411,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                     height: screenHeight * 0.02,
                                                   ),
                                                   Text(
-                                                    '86',
+                                                    yesCount.toString(),
                                                     style: TextStyle(
                                                       fontSize: 50,
                                                       fontFamily: 'OpenSansEB',
@@ -460,7 +606,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.05,
                                                       ),
                                                       Text(
-                                                        '1',
+                                                        '$childrenCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -494,7 +640,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.06,
                                                       ),
                                                       Text(
-                                                        '25',
+                                                        '$youthCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -528,7 +674,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.065,
                                                       ),
                                                       Text(
-                                                        '53',
+                                                        '$adultCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -562,7 +708,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.02,
                                                       ),
                                                       Text(
-                                                        '7',
+                                                        '$seniorCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -579,7 +725,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                   ),
                                                   Center(
                                                     child: Text(
-                                                      'Children (0-14)',
+                                                      'Children (0-12)',
                                                       style: TextStyle(
                                                         fontFamily:
                                                             'OpenSansLight',
@@ -596,7 +742,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                   ),
                                                   Center(
                                                     child: Text(
-                                                      'Youth (15-24)',
+                                                      'Youth (13-17)',
                                                       style: TextStyle(
                                                         fontFamily:
                                                             'OpenSansLight',
@@ -613,7 +759,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                   ),
                                                   Center(
                                                     child: Text(
-                                                      'Adults (24-59)',
+                                                      'Adults (18-59)',
                                                       style: TextStyle(
                                                         fontFamily:
                                                             'OpenSansLight',
@@ -691,7 +837,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.075,
                                                       ),
                                                       Text(
-                                                        '56',
+                                                        '$singleCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -725,7 +871,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.06,
                                                       ),
                                                       Text(
-                                                        '10',
+                                                        '$marriedCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -759,7 +905,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.065,
                                                       ),
                                                       Text(
-                                                        '5',
+                                                        '$widowedCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -793,7 +939,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.055,
                                                       ),
                                                       Text(
-                                                        '1',
+                                                        '$separatedCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -827,7 +973,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.065,
                                                       ),
                                                       Text(
-                                                        '0',
+                                                        '$annulledCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -862,7 +1008,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.07,
                                                       ),
                                                       Text(
-                                                        '13',
+                                                        '$liveInCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -897,7 +1043,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                             screenWidth * 0.075,
                                                       ),
                                                       Text(
-                                                        '1',
+                                                        '$otherCount',
                                                         style: TextStyle(
                                                           fontFamily:
                                                               'OpenSansLight',
@@ -918,8 +1064,8 @@ class _DashboardPageState extends State<Dashboard> {
                                         Column(
                                           children: [
                                             Container(
-                                              height: screenHeight * 0.75,
-                                              width: screenWidth * 0.16,
+                                              height: screenHeight * 0.80,
+                                              width: screenWidth * 0.15,
                                               color: Colors.white,
                                               child: Column(
                                                 children: [
@@ -940,74 +1086,7 @@ class _DashboardPageState extends State<Dashboard> {
                                                   SizedBox(
                                                     height: screenHeight * 0.1,
                                                   ),
-                                                  Center(
-                                                    child: SizedBox(
-                                                      height: screenHeight * 0.10,
-                                                      width: screenWidth * 0.10,
-                                                      child: Expanded(
-                                                        child: PieChart(
-                                                          PieChartData(
-                                                            sectionsSpace: 1,
-                                                            centerSpaceRadius:
-                                                                20,
-                                                            sections: [
-                                                              PieChartSectionData(
-                                                                color:
-                                                                    Color.fromARGB(
-                                                                      255,
-                                                                      94,
-                                                                      204,
-                                                                      98,
-                                                                    ),
-                                                                value: 30,
-                                                                radius: 50,
-                                                              ),
-                                                              PieChartSectionData(
-                                                                color:
-                                                                    Color.fromARGB(
-                                                                      255,
-                                                                      228,
-                                                                      55,
-                                                                      43,
-                                                                    ),
-                                                                value: 20,
-                                                                radius: 50,
-                                                              ),
-                                                              PieChartSectionData(
-                                                                color:
-                                                                    Color.fromARGB(
-                                                                      255,
-                                                                      224,
-                                                                      64,
-                                                                      117,
-                                                                    ),
-                                                                value: 20,
-                                                                radius: 50,
-                                                              ),
-                                                              PieChartSectionData(
-                                                                color:
-                                                                    Color.fromARGB(
-                                                                      255,
-                                                                      153,
-                                                                      153,
-                                                                      153,
-                                                                    ),
-                                                                value: 15,
-                                                                radius: 50,
-                                                              ),
-                                                              PieChartSectionData(
-                                                                color:
-                                                                    Colors
-                                                                        .orangeAccent,
-                                                                value: 15,
-                                                                radius: 50,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  
                                                   SizedBox(
                                                     height: screenHeight * 0.1,
                                                   ),

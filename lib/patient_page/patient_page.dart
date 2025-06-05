@@ -4,16 +4,17 @@ import 'package:shc/login_page/login_page.dart';
 import 'package:shc/home_page/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shc/forms/medical.dart';
-import 'package:intl/intl.dart';
 import 'package:shc/patient_page/medical_page.dart';
 
 class PatientsPage extends StatefulWidget {
+  const PatientsPage({super.key});
+
   @override
   _PatientListPageState createState() => _PatientListPageState();
 }
 
 class _PatientListPageState extends State<PatientsPage> {
- late Future<List<Map<String, dynamic>>> _patientsFuture;
+  late Future<List<Map<String, dynamic>>> _patientsFuture;
 
   @override
   void initState() {
@@ -24,7 +25,8 @@ class _PatientListPageState extends State<PatientsPage> {
   Future<List<Map<String, dynamic>>> _fetchPatients() async {
     final response = await Supabase.instance.client
         .from('patient')
-        .select('patient_id, patient_number, first_name, middle_name, last_name, civil_status, sex, birthday');
+        .select('patient_id, patient_number, first_name, middle_name, last_name, civil_status, sex, birthday')
+        .order('patient_number', ascending: true);
 
     return (response as List).cast<Map<String, dynamic>>();
   }
@@ -33,16 +35,15 @@ class _PatientListPageState extends State<PatientsPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MedicalHistoryPage(patientId: patientId),
+        builder: (_) => MedicalHistoryPage(patientId: patientId), // ✅ Pass the argument directly
       ),
     );
   }
 
-
   Widget _buildHeaderCell(String text) {
     return Center(
       child: Container(
-        height: 50,
+        height: 55,
         alignment: Alignment.center,
         color: const Color.fromARGB(255, 241, 241, 241),
         child: Text(
@@ -285,82 +286,96 @@ class _PatientListPageState extends State<PatientsPage> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: screenHeight * 0.05),
+                              SizedBox(height: screenHeight * 0.03),
                               Center(
                                 child: Container(
-          color: const Color.fromARGB(255, 255, 245, 245),
-          padding: const EdgeInsets.all(8.0),
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _patientsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return Center(child: CircularProgressIndicator());
-              }
+                                  height: screenHeight * 0.7,
+                                  width: screenWidth * 0.75,
+                                  color: const Color.fromARGB(255, 255, 245, 245),
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                                    future: _patientsFuture,
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState != ConnectionState.done) {
+                                        return Center(child: CircularProgressIndicator());
+                                      }
 
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
+                                      if (snapshot.hasError) {
+                                        return Center(child: Text('Error: ${snapshot.error}'));
+                                      }
 
-              final patients = snapshot.data ?? [];
-              if (patients.isEmpty) {
-                return Center(child: Text('No patients found.'));
-              }
+                                      final patients = snapshot.data ?? [];
+                                      if (patients.isEmpty) {
+                                        return Center(child: Text('No patients found.'));
+                                      }
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: Table(
-                    border: TableBorder.all(color: Colors.black),
-                    columnWidths: {
-                      0: FixedColumnWidth(screenWidth * 0.1),
-                      1: FixedColumnWidth(screenWidth * 0.2),
-                      2: FixedColumnWidth(screenWidth * 0.1),
-                      3: FixedColumnWidth(screenWidth * 0.1),
-                      4: FixedColumnWidth(screenWidth * 0.15),
-                    },
-                    children: [
-                      TableRow(
-                        decoration: BoxDecoration(color: Colors.grey[300]),
-                        children: [
-                          _buildHeaderCell('Patient ID'),
-                          _buildHeaderCell('Patient Name'),
-                          _buildHeaderCell('Birthday'),
-                          _buildHeaderCell('Civil Status'),
-                          _buildHeaderCell('Action'),
-                        ],
-                      ),
-                      ...patients.map((p) {
-                        final fullName =
-                            '${p['first_name'] ?? ''} ${p['middle_name'] ?? ''} ${p['last_name'] ?? ''}'.trim();
-                        final birthday = p['birthday'] != null
-                            ? DateFormat('yyyy-MM-dd').format(DateTime.parse(p['birthday']))
-                            : 'N/A';
+                                      return SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.vertical,
+                                          child: Table(
+                                            border: TableBorder.all(color: Colors.black),
+                                            columnWidths: {
+                                              0: FixedColumnWidth(screenWidth * 0.1),
+                                              1: FixedColumnWidth(screenWidth * 0.2),
+                                              2: FixedColumnWidth(screenWidth * 0.1),
+                                              3: FixedColumnWidth(screenWidth * 0.1),
+                                              4: FixedColumnWidth(screenWidth * 0.15),
+                                            },
+                                            children: [
+                                              TableRow(
+                                                decoration: BoxDecoration(color: Colors.grey[300]),
+                                                children: [
+                                                  _buildHeaderCell('Patient ID'),
+                                                  _buildHeaderCell('Patient Name'),
+                                                  _buildHeaderCell('Birthday'),
+                                                  _buildHeaderCell('Civil Status'),
+                                                  _buildHeaderCell('Action'),
+                                                ],
+                                              ),
+                                              ...patients.map((p) {
+                                              final fullName = [
+                                                p['first_name'],
+                                                p['middle_name'],
+                                                p['last_name'],
+                                              ]
+                                                  .where((part) =>
+                                                      part != null &&
+                                                      part.toString().trim().isNotEmpty &&
+                                                      part.toString().trim().toUpperCase() != 'N/A')
+                                                  .map((part) => part.toString().trim())
+                                                  .join(' ');
 
-                        return TableRow(
-                          children: [
-                            _buildDataCell(p['patient_id']?.toString() ?? ''),
-                            _buildDataCell(fullName),
-                            _buildDataCell(birthday),
-                            _buildDataCell(p['civil_status']?.toString() ?? 'N/A'),
+                                              final birthday = (p['birthday'] != null &&
+                                                                p['birthday'].toString().trim().isNotEmpty &&
+                                                                p['birthday'].toString().trim().toUpperCase() != 'N/A')
+                                                  ? p['birthday'].toString()
+                                                  : '';
 
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ElevatedButton(
-                                onPressed: () => _viewDetails(p['patient_id']),
-                                child: Text('View Details'),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+                                                return TableRow(
+                                                  children: [
+                                                    _buildDataCell(p['patient_number']?.toString() ?? ''),
+                                                    _buildDataCell(fullName),
+                                                    _buildDataCell(birthday),
+                                                    _buildDataCell(p['civil_status']?.toString() ?? 'N/A'),
+
+                                                      Padding(
+                                                        padding: const EdgeInsets.all(8.0),
+                                                        child: ElevatedButton(
+                                                          onPressed: () => _viewDetails(p['patient_id']),
+                                                          child: Text('View Details'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                              }),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Center(
@@ -370,9 +385,9 @@ class _PatientListPageState extends State<PatientsPage> {
                                       child: ElevatedButton(
                                         onPressed: () {
                                           Navigator.push(
-						context,
-						MaterialPageRoute(builder: (context) => MedicalRecord()),
-					);
+                                            context,
+                                            MaterialPageRoute(builder: (context) => AddMedicalRecord()),
+                                          );
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color.fromRGBO(247, 198, 226, 1),

@@ -1,30 +1,65 @@
 import 'package:shc/patient_page/patient_page.dart';
-import 'package:shc/patient_page/medical_record.dart';
+import 'package:shc/patient_page/id_based_form/patient_medical_form.dart';
 import 'package:flutter/material.dart';
+import 'package:shc/patient_page/medical_record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart';
 
-class MedicalHistoryPage extends StatelessWidget {
-final String patientId;
+class MedicalHistoryPage extends StatefulWidget {
+  final String patientId;
 
-  const MedicalHistoryPage({Key? key, required this.patientId}) : super(key: key);
+  const MedicalHistoryPage({super.key, required this.patientId});
 
-  Future<Map<String, dynamic>?> _fetchPatientInfo() async {
-    final response = await Supabase.instance.client
-        .from('patient')
-        .select()
-        .eq('patient_id', patientId)
-        .single();
+  @override
+  State<MedicalHistoryPage> createState() => _MedicalHistoryPageState();
+}
 
-    return Map<String, dynamic>.from(response);
+class _MedicalHistoryPageState extends State<MedicalHistoryPage> {
+  final supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    // optional, can remove since you're using FutureBuilder
   }
 
+  // Utility to normalize potentially null or empty or 'N/A' strings to display string
+  String normalizeString(dynamic val) {
+    if (val == null) return 'N/A';
+    final v = val.toString().trim();
+    if (v.isEmpty || v.toUpperCase() == 'N/A') return 'N/A';
+    return v;
+  }
+
+  Future<Map<String, dynamic>?> _fetchPatientInfo() async {
+    final response = await supabase
+        .from('patient')
+        .select()
+        .eq('patient_id', widget.patientId)
+        .single();
+
+    return response == null ? null : Map<String, dynamic>.from(response);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchMedicalHistory() async {
+    final response = await supabase
+        .from('medical_history')
+        .select()
+        .eq('patient_id', widget.patientId);
+
+    return response == null ? [] : List<Map<String, dynamic>>.from(response);
+  }
+  
   String _formatFullName(Map<String, dynamic> p) {
-    final first = p['first_name'] ?? '';
-    final middle = (p['middle_name'] ?? '').toString();
-    final last = p['last_name'] ?? '';
-    final suffix = (p['suffix'] ?? '').toString();
-    return '$first $middle $last $suffix'.trim();
+    final parts = [
+      normalizeString(p['first_name']),
+      normalizeString(p['middle_name']),
+      normalizeString(p['last_name']),
+      normalizeString(p['suffix']),
+    ];
+
+    final validParts = parts.where((part) => part != 'N/A').toList();
+
+    return validParts.join(' ');
   }
 
   @override
@@ -35,8 +70,11 @@ final String patientId;
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<Map<String, dynamic>?>(
-          future: _fetchPatientInfo(),
+        child: FutureBuilder<List<dynamic>?>(
+          future: Future.wait([
+            _fetchPatientInfo(), 
+            fetchMedicalHistory()
+          ]),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -46,16 +84,53 @@ final String patientId;
               return const Center(child: Text('Patient not found.'));
             }
 
-            final p = snapshot.data!;
-            final fullName = _formatFullName(p);
-            final birthday = p['birthday'] != null
-                ? DateFormat('MMMM d, y').format(DateTime.parse(p['birthday']))
-                : 'N/A';
+            final patientInfo = snapshot.data![0] as Map<String, dynamic>?;
+            final history = snapshot.data![1] as List<Map<String, dynamic>>;
+
+            if (patientInfo == null) {
+              return const Center(child: Text('Patient not found.'));
+            }
+
+            final fullName = _formatFullName(patientInfo);
+
+            // Normalize all fields with the new helper function
+            final birthdayStr = normalizeString(patientInfo['birthday']);
+            final email = normalizeString(patientInfo['email']);
+            final birthPlace = normalizeString(patientInfo['place_of_birth']);
+            final contact = normalizeString(patientInfo['contact_number']);
+            final civilStatus = normalizeString(patientInfo['civil_status']);
+            final houseNo = normalizeString(patientInfo['house_number']);
+            final street = normalizeString(patientInfo['street']);
+            final brgy = normalizeString(patientInfo['barangay']);
+            final city = normalizeString(patientInfo['city']);
+            final province = normalizeString(patientInfo['province']);
+            final zcode = normalizeString(patientInfo['zip_code']);
+
+            int calculateAge(DateTime birthday) {
+              final now = DateTime.now();
+              int age = now.year - birthday.year;
+
+              if (now.month < birthday.month ||
+                  (now.month == birthday.month && now.day < birthday.day)) {
+                age--;
+              }
+
+              return age;
+            }
+
+            int age = 0;
+            if (birthdayStr != 'N/A') {
+              try {
+                age = calculateAge(DateTime.parse(birthdayStr));
+              } catch (_) {
+                age = 0;
+              }
+            }
         
         return Container(
           color: const Color.fromARGB(255, 255, 242, 242),
-          height: screenHeight * 1,
-          width: screenWidth * 1,
+          height: screenHeight,
+          width: screenWidth,
           child: Wrap(
             spacing: responsiveSpacing,
             runSpacing: responsiveRunSpacing,
@@ -92,9 +167,13 @@ final String patientId;
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Container(
-                      height: screenHeight * 0.7,
-                      width: screenWidth * 0.47,
+                      height: screenHeight * 0.5,
+                      width: screenWidth * 0.4,
                       color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: Colors.white, // optional: background color
+                        borderRadius: BorderRadius.circular(10), // rounded corners
+                      ),
                       child: Column(
                         children: [
                           SizedBox(height: screenHeight * 0.03),
@@ -129,7 +208,7 @@ final String patientId;
                                   ),
                                   SizedBox(height: screenHeight * 0.02),
                                   Text(
-                                      '21 years old',
+                                      '$age years old',
                                       style: TextStyle(
                                         fontFamily: 'OpenSansSB',
                                         fontWeight: FontWeight.bold,
@@ -137,6 +216,14 @@ final String patientId;
                                         color: Colors.black,
                                       ),
                                     ),
+                                    Text(
+                                    'ID: $widget.patientId',
+                                    style: TextStyle(
+                                      fontFamily: 'OpenSansEB',
+                                      fontSize: 5,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                       ],
                                     )                                  
                                   ],
@@ -179,7 +266,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                birthday,
+                                birthdayStr,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -200,7 +287,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'Tiaong, Quezon',
+                                birthPlace,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -221,7 +308,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'Married',
+                                civilStatus,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -255,7 +342,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                '09123456789',
+                                contact,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -276,7 +363,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'genealvarezjerrylene@gmail.com',
+                                email,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -310,7 +397,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                '0123',
+                                houseNo,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -331,7 +418,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'Rizal St.',
+                                street,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -352,7 +439,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'Seoul',
+                                brgy,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -387,7 +474,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'San Pablo',
+                                city,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -408,7 +495,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                'Laguna',
+                                province,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -429,7 +516,7 @@ final String patientId;
                                 ),
                               ),
                               Text(
-                                '4000',
+                                zcode,
                                 style: TextStyle(
                                   fontFamily: 'OpenSansLight',
                                   fontSize: 15,
@@ -447,141 +534,78 @@ final String patientId;
                       ),
                     ),
                     SizedBox(width: screenWidth * 0.02),
-                    Container(
-                      height: screenHeight * 0.7,
-                      width: screenWidth * 0.47,
-                      color: Colors.white,
-                      padding: EdgeInsets.only(left: 20),
-                      child: Column(
-                        children: [
-                          SizedBox(height: screenHeight * 0.05),
-                          Text(
-                            'Medical History',
-                            style: TextStyle(
-                              fontFamily: 'OpenSansEB',
-                              fontSize: 25,
-                              color: Colors.black,
+                    Center(
+                      child: Container(
+                        height: screenHeight * 0.6,
+                        width: screenWidth * 0.4,
+                        color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Colors.white, // optional: background color
+                          borderRadius: BorderRadius.circular(10), // rounded corners
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                             Text(
+                              'Medical History',
+                              style: TextStyle(
+                                fontFamily: 'OpenSansEB',
+                                fontSize: 25,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: screenHeight * 0.03),
-                          Container(
-                            width: screenWidth * 0.4,
-                            height: screenHeight * 0.2,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                      Text(
-                                    'March 11, 2025',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Follow up check up',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ViewDetails(patientId: patientId,),
-                                        ),
-                                      );
-                                    },
-                                    style: ButtonStyle(
-                                      textStyle:
-                                          MaterialStateProperty.all<TextStyle>(
-                                            TextStyle(
-                                              decoration:
-                                                  TextDecoration.underline,
-                                            ),
+                            const SizedBox(height: 16),
+                            Column(
+                              children: history.map((h) {
+                                final date = h['date'] != null
+                                    ? DateTime.parse(h['date']).toLocal().toString().split(' ')[0]
+                                    : 'N/A';
+
+                                return Card(
+                                  child: ListTile(
+                                    title: Text(h['current_medication'] ?? 'No History'),
+                                    subtitle: Text('Date: $date'),
+                                    trailing: ElevatedButton(
+                                      child: const Text('View Details'),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ViewDetails(patientId: widget.patientId),
                                           ),
+                                        );
+                                      },
                                     ),
-                                    child: Text(
-                                      'View Record',
-                                      style: TextStyle(
-                                        fontFamily: 'OpenSansLight',
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color.fromARGB(255, 235, 49, 49),
-                                      ),
-                                    ),
-                                  )         
-                              ]
-                            )
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                          Container(
-                            width: screenWidth * 0.4,
-                            height: screenHeight * 0.2,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1),
-                              borderRadius: BorderRadius.circular(10),
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                      Text(
-                                    'March 11, 2025',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: screenWidth * 0.3,
+                              height: screenHeight * 0.06,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => PatientForm()),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color.fromRGBO(247, 198, 226, 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                    side: BorderSide(color: Colors.green.shade900, width: 2),
                                   ),
-                                  Text(
-                                    'Follow up check up',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ViewDetails(patientId: patientId,),
-                                        ),
-                                      );
-                                    },
-                                    style: ButtonStyle(
-                                      textStyle:
-                                          MaterialStateProperty.all<TextStyle>(
-                                            TextStyle(
-                                              decoration:
-                                                  TextDecoration.underline,
-                                            ),
-                                          ),
-                                    ),
-                                    child: Text(
-                                      'View Record',
-                                      style: TextStyle(
-                                        fontFamily: 'OpenSansLight',
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color.fromARGB(255, 235, 49, 49),
-                                      ),
-                                    ),
-                                  )
-                              
-                            
-                              ]
-                            )
-                          ),
-                        ],
+                                ),
+                                child: const Text(
+                                  'Medical History Form',
+                                  style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -598,7 +622,7 @@ final String patientId;
                     );
                   },
                   style: ButtonStyle(
-                    textStyle: MaterialStateProperty.all<TextStyle>(
+                    textStyle: WidgetStateProperty.all<TextStyle>(
                       TextStyle(decoration: TextDecoration.underline),
                     ),
                   ),

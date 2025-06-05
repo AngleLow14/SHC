@@ -5,13 +5,13 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
-class AddMedicalRecord extends StatefulWidget {
-  const AddMedicalRecord({super.key});
+class PatientForm extends StatefulWidget {
+  const PatientForm({super.key});
   @override
   _MedRecord createState() => _MedRecord();
 }
 
-class _MedRecord extends State<AddMedicalRecord> {
+class _MedRecord extends State<PatientForm> {
   final diagnosisId = const Uuid().v4();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _lastNameController = TextEditingController();

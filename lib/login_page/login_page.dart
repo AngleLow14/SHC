@@ -3,6 +3,8 @@ import 'package:shc/home_page/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminLoginPage extends StatefulWidget {
+  const AdminLoginPage({super.key});
+
   @override
   _AdminLoginPageState createState() => _AdminLoginPageState();
 }
@@ -11,6 +13,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscureText = true;
 
   Future<void> _login() async {
     final email = _emailController.text.trim();
@@ -101,7 +104,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                 Padding(
                                   padding: EdgeInsets.only(right: 200),
                                   child: const Text(
-                                    'Username',
+                                    'Email',
                                     style: TextStyle(
                                       fontFamily: 'OpenSans',
                                       fontSize: 10,
@@ -117,7 +120,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                     controller: _emailController,
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(),
-                                      hintText: 'Username',
+                                      hintText: 'Email',
                                     ),
                                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                                   ),
@@ -140,36 +143,47 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                   height: 35,
                                   child: TextField(
                                     controller: _passwordController,
-                                    obscureText: true,
+                                  obscureText: _obscureText,
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(),
                                       hintText: 'Password',
+                                      contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscureText ? Icons.visibility_off : Icons.visibility,
+                                          size: 16,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _obscureText = !_obscureText;
+                                          });
+                                        },
+                                      ),
                                     ),
                                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                                 const SizedBox(height: 15),
                                 SizedBox(
-  width: 80,
-  height: 30,
-  child: _isLoading
-      ? const Center(child: CircularProgressIndicator())
-      : ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 158, 7, 82),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          onPressed: _login,
-          child: const Text(
-            'Login',
-            style: TextStyle(fontSize: 10),
-          ),
-        ),
-)
-
+                                  width: 80,
+                                  height: 30,
+                                  child: _isLoading
+                                      ? const Center(child: CircularProgressIndicator())
+                                      : ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color.fromARGB(255, 158, 7, 82),
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                          ),
+                                          onPressed: _login,
+                                          child: const Text(
+                                            'Login',
+                                            style: TextStyle(fontSize: 10),
+                                          ),
+                                        ),
+                                )
                               ],
                             ),
                           ),

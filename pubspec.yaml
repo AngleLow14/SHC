@@ -31,7 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
   fl_chart: ^0.63.0
-  supabase_flutter: ^2.8.4
+  supabase_flutter: ^1.10.18   # Check for latest version
+  uuid: ^4.0.0                 # For generating patient_id (UUID)
+  intl: ^0.19.0                # For formatting dates (optional)
   flutter_map: ^6.0.0
   latlong2: ^0.9.0
 

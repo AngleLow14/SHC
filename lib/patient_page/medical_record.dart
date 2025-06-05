@@ -1,18 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:shc/patient_page/medical_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
-class ViewDetails extends StatelessWidget{
- final String patientId;
+class ViewDetails extends StatefulWidget {
+  final String patientId;
 
-  const ViewDetails({Key? key, required this.patientId}) : super(key: key);
+  const ViewDetails({super.key, required this.patientId});
+
+  @override
+  _ViewDetailsState createState() => _ViewDetailsState();
+}
+
+class _ViewDetailsState extends State<ViewDetails> {
+  final supabase = Supabase.instance.client;
+
+  Map<String, dynamic>? medicalHistory;
+  Map<String, dynamic>? sexualAndReproHistory;
+  Map<String, dynamic>? laboratoryTest;
+  Map<String, dynamic>? symptomsCurrentComplaint;
+  Map<String, dynamic>? treatmentPlan;
+
+  String _formatDate(dynamic date) {
+  if (date == null) return 'N/A';
+  try {
+    return DateFormat.yMMMd().format(DateTime.parse(date.toString()));
+  } catch (e) {
+    return 'Invalid date';
+  }
+}
+
+
+  @override
+  void initState() {
+    super.initState();
+    fetchDetails();
+  }
+
+  Future<void> fetchDetails() async {
+    final medicalFuture = supabase
+        .from('medical_history')
+        .select()
+        .eq('patient_id', widget.patientId)
+        .order('date', ascending: false)
+        .limit(1)
+        .single();
+
+    final sexualFuture = supabase
+        .from('sexual_and_reproductive_health')
+        .select()
+        .eq('patient_id', widget.patientId)
+        .order('date', ascending: false)
+        .limit(1)
+        .single();
+
+    final labTestFuture = supabase
+        .from('laboratory_test')
+        .select()
+        .eq('patient_id', widget.patientId)
+        .order('date', ascending: false)
+        .limit(1)
+        .single();
+
+    final symptomsFuture = supabase
+        .from('symptoms_and_current_complaint')
+        .select()
+        .eq('patient_id', widget.patientId)
+        .order('date', ascending: false)
+        .limit(1)
+        .single();
+
+    final treatmentFuture = supabase
+      .from('treatment_plan')
+      .select()
+      .eq('patient_id', widget.patientId)
+      .order('date', ascending: false)
+      .limit(1)
+      .single();
+
+
+    final results = await Future.wait([medicalFuture, sexualFuture, labTestFuture, symptomsFuture, treatmentFuture]);
+
+    if (mounted) {
+      setState(() {
+        medicalHistory = Map<String, dynamic>.from(results[0]);
+        sexualAndReproHistory = Map<String, dynamic>.from(results[1]);
+        laboratoryTest = Map<String, dynamic>.from(results[2]);
+        symptomsCurrentComplaint = Map<String, dynamic>.from(results[3]);
+        treatmentPlan = Map<String, dynamic>.from(results[4]);
+      });
+    }
+  }
 
 @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-
     double responsiveSpacing = 20.0;
     double responsiveRunSpacing = 10.0;
+    if (medicalHistory == null || sexualAndReproHistory == null || laboratoryTest == null || symptomsCurrentComplaint == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -23,14 +113,6 @@ class ViewDetails extends StatelessWidget{
           child: Center(
             child: Column(
               children: [
-                Container(
-                  height: screenHeight * 0.07,
-                  width: screenWidth * 1,
-                  color: Colors.white,
-                  child: Center(
-                    
-                  ),
-                ),
                 SizedBox(
                   height: screenHeight * 0.07,
                   width: screenWidth * 1,
@@ -38,7 +120,6 @@ class ViewDetails extends StatelessWidget{
                     
                   ),
                 ),
-
                 Expanded(
                   child: Container(
                     width: screenWidth * 1,
@@ -55,7 +136,7 @@ class ViewDetails extends StatelessWidget{
                               children: [
                                 Center(
                                   child: Text(
-                                  'March 11, 2025',
+                                  _formatDate(sexualAndReproHistory?['follow_up_check_up']),
                                   style: TextStyle(
                                     fontSize: 25,
                                     fontWeight: FontWeight.bold,
@@ -76,11 +157,12 @@ class ViewDetails extends StatelessWidget{
                                   ),
                                 ),
                                 ),
-                                SizedBox(height: screenHeight * 0.02),
+                                SizedBox(height: screenHeight * 0.02),                                     
                                 Wrap(
                                   spacing: responsiveSpacing,
                                   runSpacing: responsiveRunSpacing,
                                   children: [
+
                                     SizedBox(
                                       width: screenWidth * 0.15,
                                       child: Column(
@@ -98,7 +180,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${medicalHistory?['known_allergies'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -125,7 +207,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${medicalHistory?['past_current_med_condition'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -153,7 +235,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${medicalHistory?['sti_history'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -188,7 +270,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${medicalHistory?['hospitalization_history'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -215,7 +297,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Montilukast Sodium',
+                                            '${medicalHistory?['past_current_med_condition'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -243,7 +325,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Hypertension',
+                                            '${medicalHistory?['family_med_history'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -290,7 +372,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            '13',
+                                            '${sexualAndReproHistory?['number_of_sex_partner'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -317,7 +399,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Condoms, Pills',
+                                            '${sexualAndReproHistory?['use_of_contraceptives'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -345,7 +427,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Yes',
+                                            '${sexualAndReproHistory?['history_of_unprotected_sex'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -380,7 +462,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'March 01, 2025',
+                                            _formatDate(sexualAndReproHistory?['date_of_last_sexual_encounter ']),
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -407,7 +489,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Regular',
+                                            '${sexualAndReproHistory?['menstrual_history'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -435,7 +517,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${sexualAndReproHistory?['pregnancy_history'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -482,7 +564,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'None',
+                                            '${symptomsCurrentComplaint?['pain_or_discomfort'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -509,7 +591,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Yellowish',
+                                            '${symptomsCurrentComplaint?['abnormal_discharge'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -537,7 +619,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Urinary Track Infection',
+                                            '${symptomsCurrentComplaint?['urinary_problem'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -572,7 +654,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Fever, Fatigue, Itching, Skin Rashes, Body Ache',
+                                            '${symptomsCurrentComplaint?['symptoms'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -628,7 +710,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'No Findings',
+                                            '${laboratoryTest?['blood_tests'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -655,7 +737,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Urinary Track Infection',
+                                            '${laboratoryTest?['urinal_tests'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -683,7 +765,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'No Findings',
+                                            '${laboratoryTest?['swab_tests'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -718,7 +800,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'No Findings',
+                                            '${laboratoryTest?['physical_examination_findings'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -745,7 +827,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'Not Applicable',
+                                            '${laboratoryTest?['semenalysis'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -773,7 +855,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'No Findings',
+                                            '${laboratoryTest?['pap_smear'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -822,14 +904,7 @@ class ViewDetails extends StatelessWidget{
                                             child: Column(
                                               children: [
                                                 Text(
-                                            'Benzathine Penicilin (100mg)',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          Text(
-                                            'Doxyciline (100mg)',
+                                            '${treatmentPlan?['prescription'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -860,19 +935,13 @@ class ViewDetails extends StatelessWidget{
                                             child: Column(
                                               children: [
                                                 Text(
-                                            '21 Tablets',
+                                            '${treatmentPlan?['quantity'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
                                             ),
                                           ),
-                                          Text(
-                                            '7 Tablets',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
+                                          
                                               ],
                                             )
                                           ),
@@ -899,15 +968,7 @@ class ViewDetails extends StatelessWidget{
                                             child: Column(
                                               children: [
                                                 Text(
-                                            '3x a Day',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          Text(
-                                            '1 in Evening',
+                                            '${treatmentPlan?['frequency'] ?? 'N/A'}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -971,7 +1032,7 @@ class ViewDetails extends StatelessWidget{
                                           SizedBox(
                                             height: screenHeight * 0.07,
                                             child: Text(
-                                            'March 11, 2025',
+                                            _formatDate(sexualAndReproHistory?['follow_up_check_up']),
                                             style: TextStyle(
                                               fontSize: 15,
                                               color: Colors.black,
@@ -993,13 +1054,9 @@ class ViewDetails extends StatelessWidget{
                                       height: screenHeight * 0.05,
                                       child: TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MedicalHistoryPage(patientId: patientId)),
-                    );
-                  },
+                                          Navigator.pop(context); },
                   style: ButtonStyle(
-                    textStyle: MaterialStateProperty.all<TextStyle>(
+                    textStyle: WidgetStateProperty.all<TextStyle>(
                       TextStyle(decoration: TextDecoration.underline),
                     ),
                   ),
@@ -1030,5 +1087,5 @@ class ViewDetails extends StatelessWidget{
         ),
       ),
     );
+    }   
   }
-}

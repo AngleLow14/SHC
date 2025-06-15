@@ -17,6 +17,8 @@ class _TreatmState extends State<Treatment> {
   final List<TextEditingController> _prescriptionControllers = [TextEditingController()];
   final List<TextEditingController> _quantityControllers = [TextEditingController()];
   final List<TextEditingController> _frequencyControllers = [TextEditingController()];
+  bool _isActive = true; // Default to 'Yes'
+
   bool _forReferral = false;
   DateTime? _followUpCheckUp;
   DateTime? _validityDate;
@@ -59,435 +61,279 @@ class _TreatmState extends State<Treatment> {
     });
   }
 
+  void _removePrescriptionField(int index) {
+    setState(() {
+      _prescriptionControllers[index].dispose(); // Dispose controller when removed
+      _quantityControllers[index].dispose();
+      _frequencyControllers[index].dispose();
+      _prescriptionControllers.removeAt(index);
+      _quantityControllers.removeAt(index);
+      _frequencyControllers.removeAt(index);
+    });
+  }
+
   late final String patientId;
   late final String diagnosisId;
-  late final String treatmentId;
+  // `treatmentId` is generated inside the loop, so it shouldn't be late final here.
+  // late final String treatmentId; // Remove this line
 
   @override
   void initState() {
-  super.initState();
-  patientId = widget.patientData['patient_id'];
-  diagnosisId = widget.patientData['diagnosis_id'];
-  treatmentId = const Uuid().v4(); // Generate treatment_id here
+    super.initState();
+    patientId = widget.patientData['patient_id'];
+    diagnosisId = widget.patientData['diagnosis_id'];
+    // treatmentId = const Uuid().v4(); // This should be inside the loop for unique IDs per prescription
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _prescriptionControllers) {
+      controller.dispose();
+    }
+    for (var controller in _quantityControllers) {
+      controller.dispose();
+    }
+    for (var controller in _frequencyControllers) {
+      controller.dispose();
+    }
+    _diagnosisInfController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    double responsiveSpacing = 20.0;
-    double responsiveRunSpacing = 10.0;
-
     return Scaffold(
-      body: SafeArea(
-        child: SizedBox(
-          height: screenHeight,
-          width: screenWidth,
+      appBar: AppBar(
+        title: const Text('Add Treatment Plan'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                width: screenWidth,
-                color: Colors.white,
-                child: Center(
-                  child: Text(
-                    'Prescription Treatment',
-                    style: TextStyle(
-                      fontFamily: 'OpenSansEB',
-                      fontSize: 30,
-                      color: const Color.fromARGB(255, 182, 8, 37),
+              const Text(
+                'Patient Information:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text('Name: ${widget.patientData['first_name']} ${widget.patientData['last_name']}'),
+              Text('Patient Number: ${widget.patientData['patient_number']}'),
+              const SizedBox(height: 20),
+              const Text(
+                'Treatment Details:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _prescriptionControllers.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row( // <-- Wrap with Row to use Expanded
+                      crossAxisAlignment: CrossAxisAlignment.end, // Align the delete icon to the bottom
+                      children: [
+                        Expanded(
+                          flex: 3, // Adjust flex as needed
+                          child: TextFormField(
+                            key: ValueKey('prescription_${index}'), // Good practice
+                            controller: _prescriptionControllers[index],
+                            decoration: InputDecoration(
+                                labelText: 'Prescription ${index + 1}'),
+                            validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox( // Use SizedBox for fixed width
+                          width: 80,
+                          child: TextFormField(
+                            key: ValueKey('quantity_${index}'), // Good practice
+                            controller: _quantityControllers[index],
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(labelText: 'Quantity'),
+                            validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2, // Adjust flex as needed
+                          child: TextFormField(
+                            key: ValueKey('frequency_${index}'), // Good practice
+                            controller: _frequencyControllers[index],
+                            decoration: InputDecoration(labelText: 'Frequency'),
+                            validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          ),
+                        ),
+                        if (_prescriptionControllers.length > 1) // Only show delete if more than one
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () => _removePrescriptionField(index), // Use new method
+                          ),
+                      ],
                     ),
+                  );
+                },
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addPrescriptionField,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Prescription'),
+                ),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _forReferral,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _forReferral = value!;
+                      });
+                    },
+                  ),
+                  const Text('For Referral'),
+                ],
+              ),
+              InkWell(
+                onTap: () => _selectFollowUpDate(context),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Follow Up Check Up',
+                    hintText: 'Select date',
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(
+                        _followUpCheckUp == null
+                            ? 'Select Date'
+                            : DateFormat('yyyy-MM-dd').format(_followUpCheckUp!),
+                      ),
+                      const Icon(Icons.calendar_today),
+                    ],
                   ),
                 ),
               ),
-              SizedBox(
-                height: screenHeight * 0.07,
-                width: screenWidth,
-                child:  Center(
-                  child: Text(
-                    '2 OUT OF 2',
-                    style: TextStyle(fontSize: 20, color: Colors.grey, fontFamily: 'Italic'),
+              InkWell(
+                onTap: () => _selectValidityDate(context),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Validity Date',
+                    hintText: 'Select validity date',
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(
+                        _validityDate == null
+                            ? 'Select Date'
+                            : DateFormat('yyyy-MM-dd').format(_validityDate!),
+                      ),
+                      const Icon(Icons.calendar_today),
+                    ],
                   ),
                 ),
               ),
-              Expanded(
-                child: Container(
-                  width: screenWidth * 1,
-                  color: Colors.white,
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                        child: Form(
-                        key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                           Text(
-                            'VI. TREATMENT AND FOLLOW UP PLAN',
-                            style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'OpenSansEB',
-                              color: Colors.black,
-                            ),
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                          
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListView.builder(
-                                physics: NeverScrollableScrollPhysics(),
-                                itemCount: _prescriptionControllers.length,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                    child: Row(
-                                      children: [
-                                        SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
-                                          child: TextFormField(
-                                            controller: _prescriptionControllers[index],
-                                            decoration: InputDecoration(
-                                                labelText: 'Prescription ${index + 1}'),
-                                          ),
-                                        ),
-                                        SizedBox(width: screenWidth * 0.02),
-                                        SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
-                                          child: TextFormField(
-                                            controller: _quantityControllers[index],
-                                            keyboardType: TextInputType.number,
-                                            decoration: InputDecoration(labelText: 'Quantity'),
-                                          ),
-                                        ),
-                                        SizedBox(width: screenWidth * 0.02),
-                                        SizedBox(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.07,
-                                          child: TextFormField(
-                                            controller: _frequencyControllers[index],
-                                            decoration: InputDecoration(labelText: 'Frequency'),
-                                          ),
-                                        ),
-                                        if (index > 0)
-                                          IconButton(
-                                            icon: const Icon(Icons.delete),
-                                            onPressed: () {
-                                              setState(() {
-                                                _prescriptionControllers.removeAt(index);
-                                                _quantityControllers.removeAt(index);
-                                                _frequencyControllers.removeAt(index);
-                                              });
-                                            },
-                                          ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  onPressed: _addPrescriptionField,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add Prescription'),
-                                ),
-                              ),
-                              SizedBox(width: screenWidth * 0.05),
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    SizedBox(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                           Text(
-                                            'For Referral',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Checkbox(
-                                                  value: _forReferral,
-                                                  onChanged: (bool? value) {
-                                                    setState(() {
-                                                      _forReferral = value!;
-                                                    });
-                                                  },
-                                                ),
-                                               const Text(
-                                                'Check if Yes',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.1,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Follow up Check up',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: InkWell(
-                                              onTap: () => _selectFollowUpDate(context),
-                                              child: InputDecorator(
-                                                decoration: InputDecoration(
-                                                  hintText: 'Select date',
-                                                ),
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: <Widget>[
-                                                    Text(
-                                                      _followUpCheckUp == null
-                                                          ? 'Select Date'
-                                                          : DateFormat('yyyy-MM-dd').format(_followUpCheckUp!),
-                                                    ),
-                                                    const Icon(Icons.calendar_today),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(height: screenHeight * 0.02),
-                                    SizedBox(
-                                      width: screenWidth * 0.1,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Validation Date',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: InkWell(
-                                              onTap: () => _selectValidityDate(context),
-                                              child: InputDecorator(
-                                                decoration: InputDecoration(
-                                                  labelText: 'Validity Date',
-                                                  hintText: 'Select validity date',
-                                                ),
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: <Widget>[
-                                                    Text(
-                                                      _validityDate == null
-                                                          ? 'Select Date'
-                                                          : DateFormat('yyyy-MM-dd').format(_validityDate!),
-                                                    ),
-                                                    const Icon(Icons.calendar_today),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(height: screenHeight * 0.02),
-                                    Wrap(
-                                      spacing: responsiveSpacing,
-                                      runSpacing: responsiveRunSpacing,
-                                      children: [
-                                      SizedBox(
-                                          width: screenWidth * 0.3,
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Diagnosis Information',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                              SizedBox(
-                                                height: screenHeight * 0.06,
-                                                child: TextFormField(
-                                                  controller: _diagnosisInfController,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.black,
-                                                  ),
-                                                  decoration: InputDecoration(
-                                                    filled: true,
-                                                    fillColor: Colors.white,
-                                                    border: OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            5.0,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: <Widget>[
-                                    SizedBox(
-                                      width: 120,
-                                      height: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              Colors
-                                                  .transparent, // Transparent background
-                                          foregroundColor:
-                                              Colors.green, // Text/icon color
-                                          elevation: 0, // No shadow
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            side: BorderSide(
-                                              color: Colors.green,
-                                              width: 2,
-                                            ), // Green border
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Back',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 120,
-                                      height: 30,
-                                      child: ElevatedButton(
-                                        onPressed: () async {
-                                          final patientId = widget.patientData['patient_id'];
-                                          final now = DateTime.now().toIso8601String();
-
-                                          try {
-                                            for (int i = 0; i < _prescriptionControllers.length; i++) {
-                                              final treatmentId = const Uuid().v4(); // unique per prescription
-                                              
-                                              await Supabase.instance.client.from('treatment_plan').insert({
-                                                'treatment_id': treatmentId,
-                                                'patient_id': patientId,
-                                                'prescription': _prescriptionControllers[i].text,
-                                                'quantity': _quantityControllers[i].text,
-                                                'frequency': _frequencyControllers[i].text,
-                                                'for_referral': _forReferral,
-                                                'follow_up_check_up': _followUpCheckUp?.toIso8601String(),
-                                                'date': now,
-                                                'validity_date': _validityDate?.toIso8601String(),
-                                              });
-
-                                              await Supabase.instance.client.from('diagnosis').insert({
-                                                'diagnosis_id': diagnosisId,
-                                                'patient_id': patientId,
-                                                'treatment_id': treatmentId,
-                                                'diagnosis_inf': _diagnosisInfController.text,
-                                                // 'date' will auto-generate in Supabase if default is set
-                                              });
-
-                                            }
-
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Treatment plans saved successfully!')),
-                                            );
-
-                                            Navigator.popUntil(context, (route) => route.isFirst);
-                                          } catch (e) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Error: ${e.toString()}')),
-                                            );
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            side: BorderSide(
-                                              color: Colors.green.shade900,
-                                              width: 2,
-                                            ), // Border
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Submit',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ],
-                      ),
-                      ),
-                    ),
-                    ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _isActive,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isActive = value!;
+                      });
+                    },
                   ),
-                ),
-              
+                  const Text('Active (Yes/No)'),
+                ],
+              ),
+              TextFormField(
+                controller: _diagnosisInfController,
+                decoration: const InputDecoration(labelText: 'Diagnosis Information'),
+                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              ),
+
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Back'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (_formKey.currentState!.validate()) { // Validate all fields
+                        final now = DateTime.now().toIso8601String();
+
+                        try {
+                          for (int i = 0; i < _prescriptionControllers.length; i++) {
+                            final treatmentId = const Uuid().v4(); // unique per prescription
+
+                            await Supabase.instance.client.from('treatment_plan').insert({
+                              'treatment_id': treatmentId,
+                              'patient_id': patientId,
+                              'prescription': _prescriptionControllers[i].text,
+                              'quantity': _quantityControllers[i].text,
+                              'frequency': _frequencyControllers[i].text,
+                              'for_referral': _forReferral ? 'Yes' : 'No',
+                              'follow_up_check_up': _followUpCheckUp?.toIso8601String(),
+                              'date': now,
+                              'validity_date': _validityDate?.toIso8601String(),
+                              'active': _isActive ? 'Yes' : 'No',
+                            });
+
+                            await Supabase.instance.client.from('diagnosis').insert({
+                              'diagnosis_id': diagnosisId,
+                              'patient_id': patientId,
+                              'treatment_id': treatmentId, // Link diagnosis to specific treatment
+                              'diagnosis_inf': _diagnosisInfController.text,
+                              // 'date' will auto-generate in Supabase if default is set
+                            });
+                          }
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Treatment plans saved successfully!')),
+                          );
+
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Submit'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Recent Data Input:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text('Patient Name: ${widget.patientData['first_name']} ${widget.patientData['last_name']}'),
+              // Displaying only the first prescription details for brevity.
+              // You might want to loop through all controllers if displaying all.
+              if (_prescriptionControllers.isNotEmpty && _prescriptionControllers.first.text.isNotEmpty)
+                Text('Prescription 1: ${_prescriptionControllers.first.text}'),
+              if (_quantityControllers.isNotEmpty && _quantityControllers.first.text.isNotEmpty)
+                Text('Quantity 1: ${_quantityControllers.first.text}'),
+              if (_frequencyControllers.isNotEmpty && _frequencyControllers.first.text.isNotEmpty)
+                Text('Frequency 1: ${_frequencyControllers.first.text}'),
+              Text('For Referral: ${_forReferral ? 'Yes' : 'No'}'),
+              Text('Follow Up: ${_followUpCheckUp != null ? DateFormat('yyyy-MM-dd').format(_followUpCheckUp!) : 'Not Set'}'),
+              Text('Validity: ${_validityDate != null ? DateFormat('yyyy-MM-dd').format(_validityDate!) : 'Not Set'}'),
+              Text('Diagnosis Info: ${_diagnosisInfController.text}'), // Added this
+              Text('Active: ${_isActive ? 'Yes' : 'No'}'),
             ],
           ),
-        
         ),
       ),
     );

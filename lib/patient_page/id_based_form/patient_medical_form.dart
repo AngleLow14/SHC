@@ -1,2053 +1,267 @@
 import 'package:flutter/material.dart';
-import 'package:shc/forms/treatment.dart';
-import 'package:shc/patient_page/patient_page.dart';
+import 'package:shc/patient_page/id_based_form/treatment_form.dart';
+import 'package:shc/patient_page/personal_information.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 class PatientForm extends StatefulWidget {
-  const PatientForm({super.key});
+  final String patientId;
+  const PatientForm({super.key, required this.patientId});
   @override
   _MedRecord createState() => _MedRecord();
 }
-
 class _MedRecord extends State<PatientForm> {
-  final diagnosisId = const Uuid().v4();
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _middleNameController = TextEditingController();
-  bool _middleNameNA = false;
-  final TextEditingController _suffixController = TextEditingController();
-  bool _suffixNA = false;
-  DateTime? _birthday;
-  final TextEditingController _placeOfBirthController = TextEditingController();
-  final TextEditingController _houseNumberController = TextEditingController();
-  final TextEditingController _streetController = TextEditingController();
-  final TextEditingController _barangayController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _provinceController = TextEditingController();
-  final TextEditingController _zipCodeController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _contactNumberController = TextEditingController();
-  String? _civilStatus;
-  String? _sex;
+  final supabase = Supabase.instance.client;
 
-  final TextEditingController _knownAllergiesController = TextEditingController();
-  final TextEditingController _pastMedConditionController = TextEditingController();
-  final TextEditingController _stiHistoryController = TextEditingController();
-  final TextEditingController _currentMedicationController = TextEditingController();
-  final TextEditingController _familyMedHistoryController = TextEditingController();
-  bool? _hospitalizationYes = false;
-  bool? _hospitalizationNo = false;
+  final TextEditingController _allergies = TextEditingController();
+  final TextEditingController _pastConditions = TextEditingController();
+  bool _stiYes = false;
+  final TextEditingController _hospitalHistory = TextEditingController();
+  final TextEditingController _currentMedication = TextEditingController();
+  final TextEditingController _familyHistory = TextEditingController();
 
-  final TextEditingController _numSexPartnersController = TextEditingController();
-  final TextEditingController _contraceptiveController = TextEditingController();
-  final List<String> _contraceptivesList = [];
-  final TextEditingController _unprotectedSexController = TextEditingController();
-  DateTime? _lastSexualEncounterDate;
-  final TextEditingController _menstrualHistoryController = TextEditingController();
-  final TextEditingController _pregnancyHistoryController = TextEditingController();
-
-  final TextEditingController _painOrDiscomfortController = TextEditingController();
-  final TextEditingController _abnormalDischargeController = TextEditingController();
-  final TextEditingController _urinaryProblemController = TextEditingController();
-
-  final Map<String, bool> _symptomsOptions = {
-    "Skin Lesions": false,
-    "Fever": false,
-    "Body Ache": false,
-    "Itching": false,
-    "Painful Intercourse": false,
-    "Swollen Lymph Nodes": false,
-    "Skin Rushes": false,
-    "Fatigue": false,
-    "Genital Sores": false,
-    "Inflammation": false,
-    "Abnormal Bleeding": false,
-    "Sore Throat": false,
-    "Changes In Skin Color": false,
-    "Swelling In Genital Area": false,
-    "Others": false,
-  };
-
-  final TextEditingController _diagnosisInfoController = TextEditingController();
+  // Sexual & Reprod Health
+  final TextEditingController _numPartners = TextEditingController();
+  final TextEditingController _contraceptives = TextEditingController();
+  final TextEditingController _unprotectedSex = TextEditingController();
+  DateTime? _lastSexEnDate;
+  bool _disableLastSex = false;
+  final TextEditingController _menstrualHistory = TextEditingController();
+  final TextEditingController _pregnancyHistory = TextEditingController();
 
   final TextEditingController _bloodTestsController = TextEditingController();
   final TextEditingController _urinalTestsController = TextEditingController();
   final TextEditingController _swabTestsController = TextEditingController();
   final TextEditingController _papSmearController = TextEditingController();
-  final TextEditingController _physicalFindingsController = TextEditingController();
+  final TextEditingController _physicalExamController = TextEditingController();
   final TextEditingController _semenalysisController = TextEditingController();
   final TextEditingController _infectionStatusController = TextEditingController();
 
-  // For patient_number generation (simplified for this example)
-  String _generatePatientNumber() {
-    final now = DateTime.now();
-    final year = now.year;
-    // In a real app, you'd fetch the last patient number for the current year
-    // from your database and increment it.
-    return '$year-0001'; // Replace with actual logic
-  }
+  final TextEditingController _painController = TextEditingController();
+  final TextEditingController _dischargeController = TextEditingController();
+  final TextEditingController _urinaryProblemController = TextEditingController();
+  List<String> _selectedSymptoms = [];
 
-  Future<void> _selectBirthday(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _birthday ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+  final TextEditingController _sexPartnerController = TextEditingController();
+  final TextEditingController _contraceptivesController = TextEditingController();
+  final TextEditingController _unprotectedSexController = TextEditingController();
+  DateTime? _lastSexDate;
+  bool _isNoSexChecked = false;
+
+  @override
+  void dispose() {
+    _allergies.dispose();
+    _pastConditions.dispose();
+    _hospitalHistory.dispose();
+    _currentMedication.dispose();
+    _familyHistory.dispose();
+    _numPartners.dispose();
+    _contraceptives.dispose();
+    _unprotectedSex.dispose();
+    _menstrualHistory.dispose();
+    _pregnancyHistory.dispose();
+    super.dispose();
+  }
+  
+// Inside _MedicalHistoryFormPageState
+void _submitFirstForm() async { // <--- Make the function async
+  if (_formKey.currentState!.validate()) {
+    // Await the result from the pushed page
+    final resultFromTreatmentDiagnosis = await Navigator.push( // <--- Declare and assign
+      context,
+      MaterialPageRoute(
+        builder: (_) => Treatment(
+          patientId: widget.patientId,
+          medicalHistoryData: {
+            // Medical History
+            'known_allergies': _allergies.text,
+            'past_current_med_condition': _pastConditions.text,
+            'sti_history': _stiYes ? 'Yes' : 'No',
+            'hospitalization_history': _hospitalHistory.text,
+            'current_medication': _currentMedication.text,
+            'family_med_history': _familyHistory.text,
+
+            // Sexual and Reproductive Health
+            'number_of_sex_partner': int.tryParse(_numPartners.text) ?? 0,
+            'use_of_contraceptives': _contraceptives.text,
+            'history_of_unprotected_sex': _unprotectedSex.text,
+            'date_of_last_sexual_encounter': _disableLastSex ? null : _lastSexDate?.toIso8601String(),
+            'menstrual_history': _menstrualHistory.text,
+            'pregnancy_history': _pregnancyHistory.text,
+
+            // Laboratory Tests
+            'blood_tests': _bloodTestsController.text,
+            'urinal_tests': _urinalTestsController.text,
+            'swab_tests': _swabTestsController.text,
+            'pap_smear': _papSmearController.text,
+            'physical_examination_findings': _physicalExamController.text,
+            'semenalysis': _semenalysisController.text,
+            'infection_status': _infectionStatusController.text,
+
+            // Symptoms and Current Complaint
+            'pain_or_discomfort': _painController.text,
+            'abnormal_discharge': _dischargeController.text,
+            'urinary_problem': _urinaryProblemController.text,
+            'symptoms': _selectedSymptoms.join(', '), // Or store as List<String> if appropriate
+          },
+        ),
+      ),
     );
-    if (picked != null && picked != _birthday) {
-      setState(() {
-        _birthday = picked;
-      });
+
+    // After TreatmentDiagnosisFormPage has been popped, check its result
+    if (resultFromTreatmentDiagnosis == true) {
+      // Pop the current MedicalHistoryFormPage, also sending 'true' back to PatientInfoPage.
+      Navigator.pop(context, true);
     }
+  }
+}
+
+  Future<void> _selectDate(BuildContext ctx) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: ctx,
+      initialDate: now,
+      firstDate: DateTime(now.year - 100),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _lastSexDate = picked);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    double responsiveSpacing = 20.0;
-    double responsiveRunSpacing = 10.0;
-
+  Widget build(BuildContext c) {
     return Scaffold(
-      body: SafeArea(
-        child: Container(
-          height: screenHeight * 1,
-          width: screenWidth * 1,
-          color: const Color.fromARGB(255, 255, 245, 245),
-          child: Center(
-            child: Column(
-              children: [
-                Container(
-                  height: screenHeight * 0.07,
-                  width: screenWidth * 1,
-                  color: Colors.white,
-                  child: Center(
-                    child: Text(
-                      'Medical Form',
-                      style: TextStyle(
-                        fontFamily: 'OpenSansEB',
-                        fontSize: 30,
-                        color: Color.fromARGB(255, 182, 8, 37),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: screenHeight * 0.07,
-                  width: screenWidth * 1,
-                  child: Center(
-                    child: Text(
-                      '1 OUT OF 2',
-                      style: TextStyle(fontSize: 15, color: const Color.fromARGB(255, 0, 0, 0), fontFamily: 'Italic',),
-                    ),
-                  ),
-                ),
+      appBar: AppBar(
+        title: const Text('Add Medical History'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.pop(context),
+          )
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Medical History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              TextFormField(controller: _allergies, decoration: const InputDecoration(labelText: 'Known Allergies')),
+              TextFormField(controller: _pastConditions, decoration: const InputDecoration(labelText: 'Past/Current Medical Condition')),
+              CheckboxListTile(title: const Text('STI History'), value: _stiYes, onChanged: (v) => setState(() => _stiYes = v!)),
+              TextFormField(controller: _hospitalHistory, decoration: const InputDecoration(labelText: 'Hospitalization History')),
+              TextFormField(controller: _currentMedication, decoration: const InputDecoration(labelText: 'Current Medication')),
+              TextFormField(controller: _familyHistory, decoration: const InputDecoration(labelText: 'Family Medical History')),
+              const SizedBox(height: 20),
+
+              const Text('Sexual & Reproductive Health', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              TextFormField(controller: _numPartners, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Number of Sex Partners')),
+              TextFormField(controller: _contraceptives, decoration: const InputDecoration(labelText: 'Use of Contraceptives')),
+              TextFormField(controller: _unprotectedSex, decoration: const InputDecoration(labelText: 'History of Unprotected Sex')),
+              Row(children: [
                 Expanded(
-                  child: Container(
-                    width: screenWidth * 1,
-                    color: Colors.white,
-                    child: Form(
-                      key: _formKey,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16.0),
-                            width: screenWidth * 0.75,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  'I. Profile',
-                                  style: TextStyle(
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'OpenSansEB',
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Last Name',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _lastNameController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Please enter the last name';
-                                                }
-                                                return null;
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'First Name',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _firstNameController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Please enter the first name';
-                                                }
-                                                return null;
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Middle Name',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _middleNameController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Checkbox(
-                                                value: _middleNameNA,
-                                                onChanged: (bool? value) {
-                                                  setState(() {
-                                                    _middleNameNA = value!;
-                                                    if (_middleNameNA) {
-                                                      _middleNameController.text = 'N/A';
-                                                    } else if (_middleNameController.text == 'N/A') {
-                                                      _middleNameController.clear();
-                                                    }
-                                                  });
-                                                },
-                                              ),
-                                              Text(
-                                                'Toggle if not applicable',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black,
-                                                  fontFamily: 'Italic',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Suffix',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _suffixController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Checkbox(
-                                                value: _suffixNA,
-                                                onChanged: (bool? value) {
-                                                  setState(() {
-                                                    _suffixNA = value!;
-                                                    if (_suffixNA) {
-                                                      _suffixController.text = 'N/A';
-                                                    } else if (_suffixController.text == 'N/A') {
-                                                      _suffixController.clear();
-                                                    }
-                                                  });
-                                                },
-                                              ),
-                                              Text(
-                                                'Toggle if not applicable',
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black,
-                                                  fontFamily: 'Italic',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Birthday',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          InkWell(
-                                              onTap: () => _selectBirthday(context),
-                                              child: InputDecorator(
-                                                decoration: InputDecoration(
-                                                  hintText: 'Select your birthday',
-                                                ),
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: <Widget>[
-                                                    Text(
-                                                      _birthday == null
-                                                          ? 'Select Date'
-                                                          : DateFormat('yyyy-MM-dd').format(_birthday!),
-                                                    ),
-                                                    const Icon(Icons.calendar_today),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            if (_birthday == null)
-                                            const Padding(
-                                              padding: EdgeInsets.only(top: 5.0),
-                                              child: Text(
-                                                'Please select the birthday',
-                                                style: TextStyle(color: Colors.red, fontSize: 12),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Place of Birth',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _placeOfBirthController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                           Text(
-                                            'House Number',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _houseNumberController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Street',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _streetController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Barangay',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _barangayController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'City/Municipality',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _cityController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Province',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _provinceController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'ZIP Code',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _zipCodeController,
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Email',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _emailController,
-                                              style:  TextStyle(
-                                                fontSize: 12,
-                                                color: const Color.fromARGB(255, 2, 1, 1),
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Please enter the email';
-                                                }
-                                                if (!value.contains('@')) {
-                                                  return 'Please enter a valid email address';
-                                                }
-                                                return null;
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Contact Number',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _contactNumberController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Civil Status',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: DropdownButtonFormField<String>(
-                                              decoration: InputDecoration(),
-                                              value: _civilStatus,
-                                              items: <String>['Single', 'Married', 'Widowed', 'Annulled', 'Divorced', 'Other']
-                                                  .map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _civilStatus = newValue;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Sex',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: DropdownButtonFormField<String>(
-                                              decoration: InputDecoration(),
-                                              value: _sex,
-                                              items: <String>['Male', 'Female'].map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _sex = newValue;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Text(
-                                  'II. Medical History',
-                                  style: TextStyle(
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'OpenSansEB'
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Known Allergies',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _knownAllergiesController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Past and Medical Condition',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _pastMedConditionController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'History of STDs/STIs',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _stiHistoryController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'History of Hospitalization',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-
-                                          Row(
-                                            children: [
-                                              Checkbox(
-                                                value: _hospitalizationYes,
-                                                onChanged: (val) {
-                                                  setState(() {
-                                                    _hospitalizationYes = val!;
-                                                    _hospitalizationNo = !val;
-                                                  });
-                                                },
-                                              ),
-                                              const Text('Yes'),
-                                              Checkbox(
-                                                value: _hospitalizationNo,
-                                                onChanged: (val) {
-                                                  setState(() {
-                                                    _hospitalizationNo = val!;
-                                                    _hospitalizationYes = !val;
-                                                  });
-                                                },
-                                              ),
-                                              const Text('No'),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Current Medication',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _currentMedicationController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.22,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Family Medical History',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _familyMedHistoryController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Text(
-                                  'III. Sexual and Reproductive Health History',
-                                  style: TextStyle(
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'OpenSansEB'
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Number of Sexual Partners',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _numSexPartnersController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                              keyboardType: TextInputType.number,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Use of Contraceptives',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _contraceptiveController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Add Another',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: ElevatedButton(
-                                              onPressed: () {
-                                                if (_contraceptiveController.text.isNotEmpty) {
-                                                  setState(() {
-                                                    _contraceptivesList.add(_contraceptiveController.text);
-                                                    _contraceptiveController.clear();
-                                                  });
-                                                }
-                                              },
-                                              child: const Text('Add Contraceptive'),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Wrap(
-                                      spacing: 6,
-                                      children: _contraceptivesList.map((item) => Chip(label: Text(item))).toList(),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'History of Unprotected Sex',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _unprotectedSexController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Date of Last Sexual Encounter',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              readOnly: true,
-                                              decoration: InputDecoration(
-                                                suffixIcon: const Icon(Icons.calendar_today),
-                                              ),
-                                              onTap: () async {
-                                                final picked = await showDatePicker(
-                                                  context: context,
-                                                  initialDate: DateTime.now(),
-                                                  firstDate: DateTime(1900),
-                                                  lastDate: DateTime.now(),
-                                                );
-                                                if (picked != null) {
-                                                  setState(() {
-                                                    _lastSexualEncounterDate = picked;
-                                                  });
-                                                }
-                                              },
-                                              controller: TextEditingController(
-                                                text: _lastSexualEncounterDate != null
-                                                    ? DateFormat('yyyy-MM-dd').format(_lastSexualEncounterDate!)
-                                                    : '',
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Menstrual History',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _menstrualHistoryController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.22,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Pregnancy History',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _pregnancyHistoryController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Text(
-                                  'IV. Symptoms and Current Complaints',
-                                  style: TextStyle(
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'OpenSansEB'
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Pain or Discomfort',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _painOrDiscomfortController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Abnormal Discharge',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _abnormalDischargeController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Urinary Problems',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _urinaryProblemController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    Text(
-                                            'Select Symptoms',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                  Column(
-                                    children: _symptomsOptions.keys.map((symptom) {
-                                      return CheckboxListTile(
-                                        title: Text(symptom),
-                                        value: _symptomsOptions[symptom],
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _symptomsOptions[symptom] = value!;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),               
-                                SizedBox(height: screenHeight * 0.02),
-                                Text(
-                                  'V. Laboratory and Diagnostic Tests',
-                                  style: TextStyle(
-                                    fontSize: 25,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'OpenSansEB',
-                                  ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Blood Tests',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _bloodTestsController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Urinal Tests',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _urinalTestsController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Swab Tests',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _swabTestsController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Pap Smear',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _papSmearController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Physical Examination Findings',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _physicalFindingsController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.15,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Semenalysis',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _semenalysisController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.2,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Infection Status',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _infectionStatusController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: [
-                                  SizedBox(
-                                      width: screenWidth * 0.3,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Diagnosis Information',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: screenHeight * 0.06,
-                                            child: TextFormField(
-                                              controller: _diagnosisInfoController,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black,
-                                              ),
-                                              decoration: InputDecoration(
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        5.0,
-                                                      ),
-                                                ),
-                                              ),
-                                              maxLines: 3,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),    
-                        
-                                SizedBox(height: screenHeight * 0.02),
-                                Wrap(
-                                  spacing: responsiveSpacing,
-                                  runSpacing: responsiveRunSpacing,
-                                  children: <Widget>[
-                                    SizedBox(
-                                      width: screenWidth * 0.10,
-                                      height: screenHeight * 0.05,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              Colors
-                                                  .transparent, // Transparent background
-                                          foregroundColor:
-                                              Colors.green, // Text/icon color
-                                          elevation: 0, // No shadow
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            side: BorderSide(
-                                              color: Colors.green,
-                                              width: 2,
-                                            ), // Green border
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Cancel',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: screenWidth * 0.10,
-                                      height: screenHeight * 0.05,
-                                      child: ElevatedButton(
-                                        onPressed: () async {
-                                          if (_formKey.currentState!.validate() && _birthday != null) {
-                                            final patientId = const Uuid().v4();
-                                            final patientNumber = _generatePatientNumber();
-
-                                            final selectedSymptoms = _symptomsOptions.entries
-                                                .where((entry) => entry.value)
-                                                .map((entry) => entry.key)
-                                                .toList();
-
-                                            // Insert patient
-                                            final insertResponse = await Supabase.instance.client
-                                                .from('patient')
-                                                .insert({
-                                                  'patient_id': patientId,
-                                                  'last_name': _lastNameController.text,
-                                                  'first_name': _firstNameController.text,
-                                                  'middle_name': _middleNameNA ? null : _middleNameController.text,
-                                                  'suffix': _suffixNA ? null : _suffixController.text,
-                                                  'birthday': DateFormat('yyyy-MM-dd').format(_birthday!),
-                                                  'place_of_birth': _placeOfBirthController.text,
-                                                  'house_number': _houseNumberController.text,
-                                                  'street': _streetController.text,
-                                                  'barangay': _barangayController.text,
-                                                  'city': _cityController.text,
-                                                  'province': _provinceController.text,
-                                                  'zip_code': _zipCodeController.text,
-                                                  'email': _emailController.text,
-                                                  'contact_number': _contactNumberController.text,
-                                                  'civil_status': _civilStatus,
-                                                  'sex': _sex,
-                                                  'patient_number': patientNumber,
-                                                })
-                                                .select()
-                                                .single();
-
-                                            if (insertResponse != null) {
-                                              // Insert medical_history
-                                              await Supabase.instance.client.from('medical_history').insert({
-                                                'patient_id': patientId,
-                                                'known_allergies': _knownAllergiesController.text,
-                                                'past_current_med_condition': _pastMedConditionController.text,
-                                                'sti_history': _stiHistoryController.text,
-                                                'hospitalization_history': _hospitalizationYes! ? 'Yes' : 'No',
-                                                'current_medication': _currentMedicationController.text,
-                                                'family_med_history': _familyMedHistoryController.text,
-                                              });
-
-                                              // Insert sexual_and_reproductive_health
-                                              await Supabase.instance.client.from('sexual_and_reproductive_health').insert({
-                                                'patient_id': patientId,
-                                                'number_of_sex_partner': int.tryParse(_numSexPartnersController.text),
-                                                'use_of_contraceptives': _contraceptivesList.join(', '),
-                                                'history_of_unprotected_sex': _unprotectedSexController.text,
-                                                'date_of_last_sexual_encounter': _lastSexualEncounterDate != null
-                                                    ? DateFormat('yyyy-MM-dd').format(_lastSexualEncounterDate!)
-                                                    : null,
-                                                'menstrual_history': _menstrualHistoryController.text,
-                                                'pregnancy_history': _pregnancyHistoryController.text,
-                                              });
-
-                                              // Insert symptoms_and_current_complaint
-                                              await Supabase.instance.client.from('symptoms_and_current_complaint').insert({
-                                                'patient_id': patientId,
-                                                'pain_or_discomfort': _painOrDiscomfortController.text,
-                                                'abnormal_discharge': _abnormalDischargeController.text,
-                                                'urinary_problems': _urinaryProblemController.text,
-                                                'symptoms': selectedSymptoms.join(', '),
-                                              });
-
-                                              await Supabase.instance.client.from('laboratory_test').insert({
-                                                'patient_id': patientId,
-                                                'blood_tests': _bloodTestsController.text,
-                                                'urinal_tests': _urinalTestsController.text,
-                                                'swab_tests': _swabTestsController.text,
-                                                'pap_smear': _papSmearController.text,
-                                                'physical_examination_findings': _physicalFindingsController.text,
-                                                'semenalysis': _semenalysisController.text,
-                                                'infection_status': _infectionStatusController.text,
-                                                // 'date' is auto-set in Supabase if default configured
-                                              });
-
-
-                                              // Navigate to form2 with patientData
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => Treatment(
-                                                    patientData:{
-                                                      ...insertResponse, // patient_id, patient_number, etc.
-                                                      'diagnosis_id': diagnosisId,
-                                                    },
-                                                  ),
-                                                ),
-                                              );
-                                            } else {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Failed to save patient.')),
-                                              );
-                                            }
-                                          } else if (_birthday == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Please select the birthday.')),
-                                            );
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            side: BorderSide(
-                                              color: Colors.green.shade900,
-                                              width: 2,
-                                            ), // Border
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Continue',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ),
+                  child: Text(_lastSexDate == null ? 'No Date Selected' : _lastSexDate!.toLocal().toString().split(' ')[0]),
                 ),
-              ],
-            ),
+                TextButton(
+                  onPressed: _disableLastSex ? null : () => _selectDate(context),
+                  child: const Text('Pick Date'),
+                ),
+              ]),
+              CheckboxListTile(
+                title: const Text('Disable Date of Last Sexual Encounter'),
+                value: _disableLastSex,
+                onChanged: (v) => setState(() => _disableLastSex = v!),
+              ),
+              TextFormField(controller: _menstrualHistory, decoration: const InputDecoration(labelText: 'Menstrual History')),
+              TextFormField(controller: _pregnancyHistory, decoration: const InputDecoration(labelText: 'Pregnancy History')),
+              const SizedBox(height: 20),
+
+              const Text('Laboratory Tests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              TextFormField(controller: _bloodTestsController, decoration: const InputDecoration(labelText: 'Blood Tests')),
+              TextFormField(controller: _urinalTestsController, decoration: const InputDecoration(labelText: 'Urinal Tests')),
+              TextFormField(controller: _swabTestsController, decoration: const InputDecoration(labelText: 'Swab Tests')),
+              TextFormField(controller: _papSmearController, decoration: const InputDecoration(labelText: 'Pap Smear')),
+              TextFormField(controller: _physicalExamController, decoration: const InputDecoration(labelText: 'Physical Examination Findings')),
+              TextFormField(controller: _semenalysisController, decoration: const InputDecoration(labelText: 'Semenalysis')),
+              TextFormField(controller: _infectionStatusController, decoration: const InputDecoration(labelText: 'Infection Status')),
+              
+              const SizedBox(height: 20),
+              TextFormField(controller: _sexPartnerController, decoration: InputDecoration(labelText: 'Number of Sexual Partners'), keyboardType: TextInputType.number),
+              TextFormField(controller: _contraceptivesController, decoration: InputDecoration(labelText: 'Use of Contraceptives')),
+              TextFormField(controller: _unprotectedSexController, decoration: InputDecoration(labelText: 'History of Unprotected Sex')),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_lastSexDate == null
+                        ? 'Select Date of Last Sexual Encounter'
+                        : 'Selected: ${_lastSexDate!.toLocal()}'.split(' ')[0]),
+                  ),
+                  Checkbox(
+                    value: _isNoSexChecked,
+                    onChanged: (val) {
+                      setState(() {
+                        _isNoSexChecked = val!;
+                        if (_isNoSexChecked) _lastSexEnDate = null;
+                      });
+                    },
+                  ),
+                  const Text('None/No'),
+                  IconButton(
+                    icon: Icon(Icons.calendar_today),
+                    onPressed: _isNoSexChecked
+                        ? null
+                        : () async {
+                            DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime(1900),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) setState(() => _lastSexDate = picked);
+                          },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+              TextFormField(controller: _painController, decoration: InputDecoration(labelText: 'Pain or Discomfort')),
+              TextFormField(controller: _dischargeController, decoration: InputDecoration(labelText: 'Abnormal Discharge')),
+              TextFormField(controller: _urinaryProblemController, decoration: InputDecoration(labelText: 'Urinary Problem')),
+              Text('Select Symptoms:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Wrap(
+                spacing: 8.0,
+                children: [
+                  for (var symptom in [
+                    'Skin Lesions', 'Fever', 'Body Ache', 'Itching', 'Painful Intercourse', 'Swollen Lymph Nodes',
+                    'Skin Rashes', 'Fatigue', 'Genital Sores', 'Inflammation', 'Abnormal Bleeding', 'Sore Throat',
+                    'Change of Skin Color', 'Swelling in Genital Area', 'Others'
+                  ])
+                    FilterChip(
+                      label: Text(symptom),
+                      selected: _selectedSymptoms.contains(symptom),
+                      onSelected: (bool selected) {
+                        setState(() {
+                          selected
+                            ? _selectedSymptoms.add(symptom)
+                            : _selectedSymptoms.remove(symptom);
+                        });
+                      },
+                    )
+                ],
+              ),
+
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: _submitFirstForm,
+                child: const Text('Continue'),
+              ),
+            ],
           ),
         ),
+
       ),
     );
   }

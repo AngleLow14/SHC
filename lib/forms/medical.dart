@@ -38,12 +38,11 @@ class _MedRecord extends State<AddMedicalRecord> {
   final TextEditingController _stiHistoryController = TextEditingController();
   final TextEditingController _currentMedicationController = TextEditingController();
   final TextEditingController _familyMedHistoryController = TextEditingController();
-  bool? _hospitalizationYes = false;
-  bool? _hospitalizationNo = false;
+  String? _hospitalizationHistory = 'No'; // default
 
   final TextEditingController _numSexPartnersController = TextEditingController();
   final TextEditingController _contraceptiveController = TextEditingController();
-  final List<String> _contraceptivesList = [];
+  List<String> _contraceptivesList = [];
   final TextEditingController _unprotectedSexController = TextEditingController();
   DateTime? _lastSexualEncounterDate;
   final TextEditingController _menstrualHistoryController = TextEditingController();
@@ -82,12 +81,25 @@ class _MedRecord extends State<AddMedicalRecord> {
   final TextEditingController _infectionStatusController = TextEditingController();
 
   // For patient_number generation (simplified for this example)
-  String _generatePatientNumber() {
-    final now = DateTime.now();
-    final year = now.year;
-    // In a real app, you'd fetch the last patient number for the current year
-    // from your database and increment it.
-    return '$year-0001'; // Replace with actual logic
+  Future<String> _generatePatientNumber() async {
+    final year = DateTime.now().year;
+
+    // Query latest patient_number for the current year
+    final response = await Supabase.instance.client
+        .from('patient')
+        .select('patient_number')
+        .like('patient_number', '$year-%')
+        .order('patient_number', ascending: false)
+        .limit(1);
+
+    if (response.isEmpty) {
+      return '$year-0001';
+    } else {
+      final lastNumber = response[0]['patient_number'];
+      final lastSeq = int.parse(lastNumber.split('-')[1]);
+      final nextSeq = (lastSeq + 1).toString().padLeft(4, '0');
+      return '$year-$nextSeq';
+    }
   }
 
   Future<void> _selectBirthday(BuildContext context) async {
@@ -990,26 +1002,32 @@ class _MedRecord extends State<AddMedicalRecord> {
 
                                           Row(
                                             children: [
-                                              Checkbox(
-                                                value: _hospitalizationYes,
-                                                onChanged: (val) {
-                                                  setState(() {
-                                                    _hospitalizationYes = val!;
-                                                    _hospitalizationNo = !val;
-                                                  });
-                                                },
+                                              Expanded(
+                                                child: CheckboxListTile(
+                                                  title: const Text('Yes'),
+                                                  value: _hospitalizationHistory == 'Yes',
+                                                  onChanged: (val) {
+                                                    if (val == true) {
+                                                      setState(() {
+                                                        _hospitalizationHistory = 'Yes';
+                                                      });
+                                                    }
+                                                  },
+                                                ),
                                               ),
-                                              const Text('Yes'),
-                                              Checkbox(
-                                                value: _hospitalizationNo,
-                                                onChanged: (val) {
-                                                  setState(() {
-                                                    _hospitalizationNo = val!;
-                                                    _hospitalizationYes = !val;
-                                                  });
-                                                },
+                                              Expanded(
+                                                child: CheckboxListTile(
+                                                  title: const Text('No'),
+                                                  value: _hospitalizationHistory == 'No',
+                                                  onChanged: (val) {
+                                                    if (val == true) {
+                                                      setState(() {
+                                                        _hospitalizationHistory = 'No';
+                                                      });
+                                                    }
+                                                  },
+                                                ),
                                               ),
-                                              const Text('No'),
                                             ],
                                           ),
                                         ],
@@ -1533,7 +1551,8 @@ class _MedRecord extends State<AddMedicalRecord> {
                                         },
                                       );
                                     }).toList(),
-                                  ),               
+                                  ),
+               
                                 SizedBox(height: screenHeight * 0.02),
                                 Text(
                                   'V. Laboratory and Diagnostic Tests',
@@ -1903,111 +1922,118 @@ class _MedRecord extends State<AddMedicalRecord> {
                                       height: screenHeight * 0.05,
                                       child: ElevatedButton(
                                         onPressed: () async {
-                                          if (_formKey.currentState!.validate() && _birthday != null) {
-                                            final patientId = const Uuid().v4();
-                                            final patientNumber = _generatePatientNumber();
+                        if (_formKey.currentState!.validate() && _birthday != null) {
+                          final patientId = const Uuid().v4();
+                          final patientNumber = await _generatePatientNumber();
 
-                                            final selectedSymptoms = _symptomsOptions.entries
-                                                .where((entry) => entry.value)
-                                                .map((entry) => entry.key)
-                                                .toList();
+                          final selectedSymptoms = _symptomsOptions.entries
+                              .where((entry) => entry.value)
+                              .map((entry) => entry.key)
+                              .toList();
 
-                                            // Insert patient
-                                            final insertResponse = await Supabase.instance.client
-                                                .from('patient')
-                                                .insert({
-                                                  'patient_id': patientId,
-                                                  'last_name': _lastNameController.text,
-                                                  'first_name': _firstNameController.text,
-                                                  'middle_name': _middleNameNA ? null : _middleNameController.text,
-                                                  'suffix': _suffixNA ? null : _suffixController.text,
-                                                  'birthday': DateFormat('yyyy-MM-dd').format(_birthday!),
-                                                  'place_of_birth': _placeOfBirthController.text,
-                                                  'house_number': _houseNumberController.text,
-                                                  'street': _streetController.text,
-                                                  'barangay': _barangayController.text,
-                                                  'city': _cityController.text,
-                                                  'province': _provinceController.text,
-                                                  'zip_code': _zipCodeController.text,
-                                                  'email': _emailController.text,
-                                                  'contact_number': _contactNumberController.text,
-                                                  'civil_status': _civilStatus,
-                                                  'sex': _sex,
-                                                  'patient_number': patientNumber,
-                                                })
-                                                .select()
-                                                .single();
+                          try {
+                            // Insert patient
+                            final insertResponse = await Supabase.instance.client
+                                .from('patient')
+                                .insert({
+                              'patient_id': patientId,
+                              'last_name': _lastNameController.text,
+                              'first_name': _firstNameController.text,
+                              'middle_name': _middleNameNA ? null : _middleNameController.text,
+                              'suffix': _suffixNA ? null : _suffixController.text,
+                              'birthday': DateFormat('yyyy-MM-dd').format(_birthday!),
+                              'place_of_birth': _placeOfBirthController.text,
+                              'house_number': _houseNumberController.text,
+                              'street': _streetController.text,
+                              'barangay': _barangayController.text,
+                              'city': _cityController.text,
+                              'province': _provinceController.text,
+                              'zip_code': _zipCodeController.text,
+                              'email': _emailController.text,
+                              'contact_number': _contactNumberController.text,
+                              'civil_status': _civilStatus,
+                              'sex': _sex,
+                              'patient_number': patientNumber,
+                            })
+                                .select()
+                                .single();
 
-                                            if (insertResponse != null) {
-                                              // Insert medical_history
-                                              await Supabase.instance.client.from('medical_history').insert({
-                                                'patient_id': patientId,
-                                                'known_allergies': _knownAllergiesController.text,
-                                                'past_current_med_condition': _pastMedConditionController.text,
-                                                'sti_history': _stiHistoryController.text,
-                                                'hospitalization_history': _hospitalizationYes! ? 'Yes' : 'No',
-                                                'current_medication': _currentMedicationController.text,
-                                                'family_med_history': _familyMedHistoryController.text,
-                                              });
+                            if (insertResponse != null) {
+                              // Insert medical_history
+                              await Supabase.instance.client.from('medical_history').insert({
+                                'patient_id': patientId,
+                                'known_allergies': _knownAllergiesController.text.isEmpty ? null : _knownAllergiesController.text,
+                                'past_current_med_condition': _pastMedConditionController.text.isEmpty ? null : _pastMedConditionController.text,
+                                'sti_history': _stiHistoryController.text.isEmpty ? null : _stiHistoryController.text,
+                                'hospitalization_history': _hospitalizationHistory,
+                                'current_medication': _currentMedicationController.text.isEmpty ? null : _currentMedicationController.text,
+                                'family_med_history': _familyMedHistoryController.text.isEmpty ? null : _familyMedHistoryController.text,
+                              });
 
-                                              // Insert sexual_and_reproductive_health
-                                              await Supabase.instance.client.from('sexual_and_reproductive_health').insert({
-                                                'patient_id': patientId,
-                                                'number_of_sex_partner': int.tryParse(_numSexPartnersController.text),
-                                                'use_of_contraceptives': _contraceptivesList.join(', '),
-                                                'history_of_unprotected_sex': _unprotectedSexController.text,
-                                                'date_of_last_sexual_encounter': _lastSexualEncounterDate != null
-                                                    ? DateFormat('yyyy-MM-dd').format(_lastSexualEncounterDate!)
-                                                    : null,
-                                                'menstrual_history': _menstrualHistoryController.text,
-                                                'pregnancy_history': _pregnancyHistoryController.text,
-                                              });
+                              // Insert sexual_and_reproductive_health
+                              await Supabase.instance.client.from('sexual_and_reproductive_health').insert({
+                                'patient_id': patientId,
+                                'number_of_sex_partner': int.tryParse(_numSexPartnersController.text),
+                                'use_of_contraceptives': _contraceptivesList.isEmpty ? null : _contraceptivesList.join(', '),
+                                'history_of_unprotected_sex': _unprotectedSexController.text.isEmpty ? null : _unprotectedSexController.text,
+                                'date_of_last_sexual_encounter': _lastSexualEncounterDate != null
+                                    ? DateFormat('yyyy-MM-dd').format(_lastSexualEncounterDate!)
+                                    : null,
+                                'menstrual_history': _menstrualHistoryController.text.isEmpty ? null : _menstrualHistoryController.text,
+                                'pregnancy_history': _pregnancyHistoryController.text.isEmpty ? null : _pregnancyHistoryController.text,
+                              });
 
-                                              // Insert symptoms_and_current_complaint
-                                              await Supabase.instance.client.from('symptoms_and_current_complaint').insert({
-                                                'patient_id': patientId,
-                                                'pain_or_discomfort': _painOrDiscomfortController.text,
-                                                'abnormal_discharge': _abnormalDischargeController.text,
-                                                'urinary_problems': _urinaryProblemController.text,
-                                                'symptoms': selectedSymptoms.join(', '),
-                                              });
+                              // Insert symptoms_and_current_complaint
+                              await Supabase.instance.client.from('symptoms_and_current_complaint').insert({
+                                'patient_id': patientId,
+                                'pain_or_discomfort': _painOrDiscomfortController.text.isEmpty ? null : _painOrDiscomfortController.text,
+                                'abnormal_discharge': _abnormalDischargeController.text.isEmpty ? null : _abnormalDischargeController.text,
+                                'urinary_problems': _urinaryProblemController.text.isEmpty ? null : _urinaryProblemController.text,
+                                'symptoms': selectedSymptoms.isEmpty ? null : selectedSymptoms.join(', '),
+                              });
 
-                                              await Supabase.instance.client.from('laboratory_test').insert({
-                                                'patient_id': patientId,
-                                                'blood_tests': _bloodTestsController.text,
-                                                'urinal_tests': _urinalTestsController.text,
-                                                'swab_tests': _swabTestsController.text,
-                                                'pap_smear': _papSmearController.text,
-                                                'physical_examination_findings': _physicalFindingsController.text,
-                                                'semenalysis': _semenalysisController.text,
-                                                'infection_status': _infectionStatusController.text,
-                                                // 'date' is auto-set in Supabase if default configured
-                                              });
+                              await Supabase.instance.client.from('laboratory_test').insert({
+                                'patient_id': patientId,
+                                'blood_tests': _bloodTestsController.text.isEmpty ? null : _bloodTestsController.text,
+                                'urinal_tests': _urinalTestsController.text.isEmpty ? null : _urinalTestsController.text,
+                                'swab_tests': _swabTestsController.text.isEmpty ? null : _swabTestsController.text,
+                                'pap_smear': _papSmearController.text.isEmpty ? null : _papSmearController.text,
+                                'physical_examination_findings': _physicalFindingsController.text.isEmpty ? null : _physicalFindingsController.text,
+                                'semenalysis': _semenalysisController.text.isEmpty ? null : _semenalysisController.text,
+                                'infection_status': _infectionStatusController.text.isEmpty ? null : _infectionStatusController.text,
+                                // 'date' is auto-set in Supabase if default configured
+                              });
 
-
-                                              // Navigate to form2 with patientData
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => Treatment(
-                                                    patientData:{
-                                                      ...insertResponse, // patient_id, patient_number, etc.
-                                                      'diagnosis_id': diagnosisId,
-                                                    },
-                                                  ),
-                                                ),
-                                              );
-                                            } else {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Failed to save patient.')),
-                                              );
-                                            }
-                                          } else if (_birthday == null) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Please select the birthday.')),
-                                            );
-                                          }
-                                        },
+                              final diagnosisId = const Uuid().v4();
+                              // Navigate to form2 with patientData
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => Treatment(
+                                    patientData:{
+                                      ...insertResponse, // patient_id, patient_number, etc.
+                                      'diagnosis_id': diagnosisId,
+                                    },
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Failed to save patient.')),
+                              );
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error saving data: $e')),
+                            );
+                            print('Error saving data: $e'); // Print the error to console for debugging
+                          }
+                        } else if (_birthday == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select the birthday.')),
+                          );
+                        }
+                      },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.green,
                                           padding: EdgeInsets.symmetric(

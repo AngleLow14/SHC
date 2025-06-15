@@ -20,7 +20,8 @@ class _DashboardPageState extends State<Dashboard> {
   int youthCount = 0;
   int adultCount = 0;
   int seniorCount = 0;
-  int yesCount = 0;
+  
+  int _activeCount = 0;
   bool isLoading = true;
   String? errorMessage;
 
@@ -30,7 +31,7 @@ void initState() {
   fetchSexDistribution();
   fetchCivilStatusCounts();
   fetchAndCategorizePatients();
-  fetchSTIHistory();
+  fetchActiveCount();
 }
 
   int singleCount = 0;
@@ -143,37 +144,19 @@ void initState() {
     });
   }
 
-  Future<void> fetchSTIHistory() async {
+ Future<void> fetchActiveCount() async {
     try {
       final response = await supabase
-          .from('medical_history')
-          .select('sti_history')
-          .order('date', ascending: false)
-          .limit(1)
-          .single();
+          .from('treatment_plan')
+          .select('*', const FetchOptions(count: CountOption.exact))
+          .eq('active', true)
+          .execute();
 
-      final stiHistory = response['sti_history'] as List<dynamic>?;
-
-      if (stiHistory != null) {
-        int count = stiHistory
-            .where((item) => item.toString().toLowerCase().contains('yes'))
-            .length;
-
-        setState(() {
-          yesCount = count;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          errorMessage = "No STI history found.";
-          isLoading = false;
-        });
-      }
-    } catch (e) {
       setState(() {
-        errorMessage = "Failed to fetch data: $e";
-        isLoading = false;
+        _activeCount = response.count ?? 0;
       });
+    } catch (e) {
+      debugPrint('Error fetching active count: $e');
     }
   }
 
@@ -411,7 +394,7 @@ void initState() {
                                                     height: screenHeight * 0.02,
                                                   ),
                                                   Text(
-                                                    yesCount.toString(),
+                                                   '$_activeCount',
                                                     style: TextStyle(
                                                       fontSize: 50,
                                                       fontFamily: 'OpenSansEB',

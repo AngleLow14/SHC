@@ -4,7 +4,7 @@ import 'package:shc/login_page/login_page.dart';
 import 'package:shc/home_page/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shc/forms/medical.dart';
-import 'package:shc/patient_page/medical_page.dart';
+import 'package:shc/patient_page/personal_information.dart';
 
 class PatientsPage extends StatefulWidget {
   const PatientsPage({super.key});
@@ -14,67 +14,51 @@ class PatientsPage extends StatefulWidget {
 }
 
 class _PatientListPageState extends State<PatientsPage> {
-  late Future<List<Map<String, dynamic>>> _patientsFuture;
+  final supabase = Supabase.instance.client;
+
+  List<dynamic> _allPatients = [];
+  List<dynamic> _filteredPatients = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _patientsFuture = _fetchPatients();
+    _fetchPatients();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchPatients() async {
-    final response = await Supabase.instance.client
+  Future<void> _fetchPatients() async {
+    final response = await supabase
         .from('patient')
-        .select('patient_id, patient_number, first_name, middle_name, last_name, civil_status, sex, birthday')
+        .select()
         .order('patient_number', ascending: true);
 
-    return (response as List).cast<Map<String, dynamic>>();
+    setState(() {
+      _allPatients = response;
+      _filteredPatients = response;
+    });
   }
 
-  void _viewDetails(String patientId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MedicalHistoryPage(patientId: patientId), // ✅ Pass the argument directly
-      ),
-    );
+  void _filterPatients(String query) {
+    final filtered = _allPatients.where((patient) {
+      final fullName = _formatFullName(patient).toLowerCase();
+      final patientNumber = patient['patient_number']?.toLowerCase() ?? '';
+      final search = query.toLowerCase();
+
+      return fullName.contains(search) || patientNumber.contains(search);
+    }).toList();
+
+    setState(() {
+      _searchQuery = query;
+      _filteredPatients = filtered;
+    });
   }
 
-  Widget _buildHeaderCell(String text) {
-    return Center(
-      child: Container(
-        height: 55,
-        alignment: Alignment.center,
-        color: const Color.fromARGB(255, 241, 241, 241),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 15,
-            fontFamily: 'OpenSansEB',
-            color: Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDataCell(String text) {
-    return Center(
-      child: Container(
-        alignment: Alignment.center,
-        color: Colors.white,
-        height: 55,
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'OpenSansLight',
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: Colors.black,
-          ),
-        ),
-      ),
-    );
+  String _formatFullName(Map patient) {
+    final first = patient['first_name'] ?? '';
+    final middle = patient['middle_name'] == 'N/A' ? '' : patient['middle_name'] ?? '';
+    final last = patient['last_name'] ?? '';
+    final suffix = patient['suffix'] == 'N/A' ? '' : patient['suffix'] ?? '';
+    return '$first ${middle.isNotEmpty ? '$middle ' : ''}$last ${suffix.isNotEmpty ? suffix : ''}'.trim();
   }
 
   @override
@@ -194,14 +178,10 @@ class _PatientListPageState extends State<PatientsPage> {
                                   height: screenHeight * 0.05,
                                   width: screenWidth * 0.13,
                                   child: TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => AppointmentPage(),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () {Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => AppointmentPage())
+                                    );},
                                     child: Text(
                                       'Appointments',
                                       style: TextStyle(
@@ -282,6 +262,7 @@ class _PatientListPageState extends State<PatientsPage> {
                                         ),
                                         hintText: 'Search...',
                                       ),
+                                      onChanged: _filterPatients,
                                     ),
                                   ),
                                 ],
@@ -293,87 +274,41 @@ class _PatientListPageState extends State<PatientsPage> {
                                   width: screenWidth * 0.75,
                                   color: const Color.fromARGB(255, 255, 245, 245),
                                   padding: const EdgeInsets.all(8.0),
-                                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                                    future: _patientsFuture,
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState != ConnectionState.done) {
-                                        return Center(child: CircularProgressIndicator());
-                                      }
-
-                                      if (snapshot.hasError) {
-                                        return Center(child: Text('Error: ${snapshot.error}'));
-                                      }
-
-                                      final patients = snapshot.data ?? [];
-                                      if (patients.isEmpty) {
-                                        return Center(child: Text('No patients found.'));
-                                      }
-
-                                      return SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: SingleChildScrollView(
-                                          scrollDirection: Axis.vertical,
-                                          child: Table(
-                                            border: TableBorder.all(color: Colors.black),
-                                            columnWidths: {
-                                              0: FixedColumnWidth(screenWidth * 0.1),
-                                              1: FixedColumnWidth(screenWidth * 0.2),
-                                              2: FixedColumnWidth(screenWidth * 0.1),
-                                              3: FixedColumnWidth(screenWidth * 0.1),
-                                              4: FixedColumnWidth(screenWidth * 0.15),
-                                            },
-                                            children: [
-                                              TableRow(
-                                                decoration: BoxDecoration(color: Colors.grey[300]),
-                                                children: [
-                                                  _buildHeaderCell('Patient ID'),
-                                                  _buildHeaderCell('Patient Name'),
-                                                  _buildHeaderCell('Birthday'),
-                                                  _buildHeaderCell('Civil Status'),
-                                                  _buildHeaderCell('Action'),
-                                                ],
-                                              ),
-                                              ...patients.map((p) {
-                                              final fullName = [
-                                                p['first_name'],
-                                                p['middle_name'],
-                                                p['last_name'],
-                                              ]
-                                                  .where((part) =>
-                                                      part != null &&
-                                                      part.toString().trim().isNotEmpty &&
-                                                      part.toString().trim().toUpperCase() != 'N/A')
-                                                  .map((part) => part.toString().trim())
-                                                  .join(' ');
-
-                                              final birthday = (p['birthday'] != null &&
-                                                                p['birthday'].toString().trim().isNotEmpty &&
-                                                                p['birthday'].toString().trim().toUpperCase() != 'N/A')
-                                                  ? p['birthday'].toString()
-                                                  : '';
-
-                                                return TableRow(
-                                                  children: [
-                                                    _buildDataCell(p['patient_number']?.toString() ?? ''),
-                                                    _buildDataCell(fullName),
-                                                    _buildDataCell(birthday),
-                                                    _buildDataCell(p['civil_status']?.toString() ?? 'N/A'),
-
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: ElevatedButton(
-                                                          onPressed: () => _viewDetails(p['patient_id']),
-                                                          child: Text('View Details'),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              }),
-                                            ],
+                                  child: Expanded(
+                                    child: _filteredPatients.isEmpty
+                                        ? const Center(child: Text('No patients found.'))
+                                        : SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: DataTable(
+                                              columns: const [
+                                                DataColumn(label: Text('Patient Number')),
+                                                DataColumn(label: Text('Patient Name')),
+                                                DataColumn(label: Text('Birthday')),
+                                                DataColumn(label: Text('Civil Status')),
+                                                DataColumn(label: Text('Action')),
+                                              ],
+                                              rows: _filteredPatients.map((patient) {
+                                                return DataRow(cells: [
+                                                  DataCell(Text(patient['patient_number'] ?? '')),
+                                                  DataCell(Text(_formatFullName(patient))),
+                                                  DataCell(Text(patient['birthday'] ?? '')),
+                                                  DataCell(Text(patient['civil_status'] ?? '')),
+                                                  DataCell(ElevatedButton(
+                                                    child: const Text('View Details'),
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              MedicalHistoryPage(patientId: patient['patient_id']),
+                                                        ),
+                                                      );
+                                                    },
+                                                  )),
+                                                ]);
+                                              }).toList(),
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
                                   ),
                                 ),
                               ),
@@ -406,7 +341,7 @@ class _PatientListPageState extends State<PatientsPage> {
                                           ),
                                         ),
                                         child: Text(
-                                          'Medical History Form',
+                                          'Add New Patient',
                                           style: TextStyle(
                                             fontSize: 15,
                                             color: Colors.black,

@@ -260,7 +260,7 @@ class _PatientListPageState extends State<PatientsPage> {
                                             10.0,
                                           ),
                                         ),
-                                        hintText: 'Search...',
+                                        hintText: 'Search Patient ID or Name',
                                       ),
                                       onChanged: _filterPatients,
                                     ),
@@ -270,48 +270,124 @@ class _PatientListPageState extends State<PatientsPage> {
                               SizedBox(height: screenHeight * 0.03),
                               Center(
                                 child: Container(
-                                  height: screenHeight * 0.7,
-                                  width: screenWidth * 0.75,
-                                  color: const Color.fromARGB(255, 255, 245, 245),
+                                  height: screenHeight * 0.75,
+                                  width: screenWidth * 0.7,
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Expanded(
-                                    child: _filteredPatients.isEmpty
-                                        ? const Center(child: Text('No patients found.'))
-                                        : SingleChildScrollView(
-                                            scrollDirection: Axis.horizontal,
-                                            child: DataTable(
-                                              columns: const [
-                                                DataColumn(label: Text('Patient Number')),
-                                                DataColumn(label: Text('Patient Name')),
-                                                DataColumn(label: Text('Birthday')),
-                                                DataColumn(label: Text('Civil Status')),
-                                                DataColumn(label: Text('Action')),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxHeight: screenHeight * 0.55,
+                                      ),
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.vertical,
+                                        child: Table(
+                                          border: TableBorder.all(color: Colors.black12),
+                                          columnWidths: {
+                                            0: FixedColumnWidth(screenWidth * 0.12),
+                                            1: FixedColumnWidth(screenWidth * 0.2),
+                                            2: FixedColumnWidth(screenWidth * 0.1),
+                                            3: FixedColumnWidth(screenWidth * 0.1),
+                                            4: FixedColumnWidth(screenWidth * 0.15),
+                                          },
+                                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                                          children: [
+                                            // Header Row
+                                            TableRow(
+                                              decoration: const BoxDecoration(color: Color(0xFFE0E0E0)),
+                                              children: [
+                                                Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child: Center(
+                                                  child: Text('Patient ID', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18, fontWeight: FontWeight.bold)),
+                                                ),
+                                                ),
+                                                Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child: Center(
+                                                  child: Text('Patient Name', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18, fontWeight: FontWeight.bold)),
+                                                ),
+                                                ),
+                                                Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child: Center(
+                                                  child: Text('Birthday', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18, fontWeight: FontWeight.bold)),
+                                                ),
+                                                ),
+                                                Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child: Center(
+                                                  child: Text('Civil Status', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18, fontWeight: FontWeight.bold)),
+                                                ),
+                                                ),
+                                                Padding(
+                                                  padding: EdgeInsets.all(8),
+                                                  child: Center(
+                                                  child: Text('Action', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18, fontWeight: FontWeight.bold)),
+                                                ),
+                                                ),
                                               ],
-                                              rows: _filteredPatients.map((patient) {
-                                                return DataRow(cells: [
-                                                  DataCell(Text(patient['patient_number'] ?? '')),
-                                                  DataCell(Text(_formatFullName(patient))),
-                                                  DataCell(Text(patient['birthday'] ?? '')),
-                                                  DataCell(Text(patient['civil_status'] ?? '')),
-                                                  DataCell(ElevatedButton(
-                                                    child: const Text('View Details'),
-                                                    onPressed: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              MedicalHistoryPage(patientId: patient['patient_id']),
-                                                        ),
-                                                      );
-                                                    },
-                                                  )),
-                                                ]);
-                                              }).toList(),
                                             ),
-                                          ),
+                                            // Patient Rows
+                                            ..._filteredPatients.map((patient) {
+                                              return TableRow(
+                                                decoration: const BoxDecoration(color: Colors.white),
+                                                children: [
+                                                  Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Center(
+                                                      child: Text(patient['patient_number'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)),
+                                                      ),
+                                                  ),
+                                                  Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Center(
+                                                      child: Text(_formatFullName(patient), style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Center(
+                                                      child: Text(patient['birthday'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Center(
+                                                      child: Text(patient['civil_status'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    color: Colors.white,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: ElevatedButton(
+                                                        onPressed: () {
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => MedicalHistoryPage(
+                                                                patientId: patient['patient_id'],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        child: const Text('View Details'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+
+                                            }).toList(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
+
                               SizedBox(height: screenHeight * 0.02),
                               Center(
                                 child: SizedBox(

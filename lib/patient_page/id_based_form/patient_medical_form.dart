@@ -26,7 +26,6 @@ class _MedRecord extends State<PatientForm> {
   final TextEditingController _numPartners = TextEditingController();
   final TextEditingController _contraceptives = TextEditingController();
   final TextEditingController _unprotectedSex = TextEditingController();
-  DateTime? _lastSexEnDate;
   bool _disableLastSex = false;
   final TextEditingController _menstrualHistory = TextEditingController();
   final TextEditingController _pregnancyHistory = TextEditingController();
@@ -44,11 +43,7 @@ class _MedRecord extends State<PatientForm> {
   final TextEditingController _urinaryProblemController = TextEditingController();
   List<String> _selectedSymptoms = [];
 
-  final TextEditingController _sexPartnerController = TextEditingController();
-  final TextEditingController _contraceptivesController = TextEditingController();
-  final TextEditingController _unprotectedSexController = TextEditingController();
   DateTime? _lastSexDate;
-  bool _isNoSexChecked = false;
 
   @override
   void dispose() {
@@ -131,105 +126,443 @@ void _submitFirstForm() async { // <--- Make the function async
 
   @override
   Widget build(BuildContext c) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    double responsiveSpacing = 20.0;
+    double responsiveRunSpacing = 10.0;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Medical History'),
-        actions: [
-          TextButton(
-            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-            onPressed: () => Navigator.pop(context),
-          )
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text('Medical History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              TextFormField(controller: _allergies, decoration: const InputDecoration(labelText: 'Known Allergies')),
-              TextFormField(controller: _pastConditions, decoration: const InputDecoration(labelText: 'Past/Current Medical Condition')),
+              Container(
+                  height: screenHeight * 0.1,
+                  width: screenWidth,
+                  color: const Color.fromARGB(255, 255, 245, 245),
+                  child: Center(
+                    child: Text(
+                      '1 OUT OF 2',
+                      style: TextStyle(fontSize: 15, color: const Color.fromARGB(255, 0, 0, 0), fontFamily: 'Italic',),
+                    ),
+                  ),
+                ),
+                Container(
+                  height: screenHeight,
+                  width: screenWidth * 0.9,
+                  color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                           SizedBox(
+                height: screenHeight * 0.02),
+                                Text(
+                                  'I. Medical History',
+                                  style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'OpenSansEB'
+                                  ),
+                                ),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.1,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Known Allergies', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _allergies, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Past/Current Medical Condition', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _pastConditions, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Hospitalization History', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _hospitalHistory, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+
+              SizedBox(height: screenHeight * 0.02),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Current Medication', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _currentMedication, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Family Medical History', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _familyHistory, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+              
               CheckboxListTile(title: const Text('STI History'), value: _stiYes, onChanged: (v) => setState(() => _stiYes = v!)),
-              TextFormField(controller: _hospitalHistory, decoration: const InputDecoration(labelText: 'Hospitalization History')),
-              TextFormField(controller: _currentMedication, decoration: const InputDecoration(labelText: 'Current Medication')),
-              TextFormField(controller: _familyHistory, decoration: const InputDecoration(labelText: 'Family Medical History')),
               const SizedBox(height: 20),
 
-              const Text('Sexual & Reproductive Health', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              TextFormField(controller: _numPartners, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Number of Sex Partners')),
-              TextFormField(controller: _contraceptives, decoration: const InputDecoration(labelText: 'Use of Contraceptives')),
-              TextFormField(controller: _unprotectedSex, decoration: const InputDecoration(labelText: 'History of Unprotected Sex')),
+              SizedBox(height: screenHeight * 0.02),
+                                Text(
+                                  'II. Sexual and Reproductive Health History',
+                                  style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'OpenSansEB'
+                                  ),
+                                ),
+
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('No. of Sex Partner', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _numPartners, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Use of Contraceptives', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _contraceptives, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('History of Unprotected Sex', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _unprotectedSex, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Pap Smear', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _papSmearController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+
               Row(children: [
                 Expanded(
-                  child: Text(_lastSexDate == null ? 'No Date Selected' : _lastSexDate!.toLocal().toString().split(' ')[0]),
+                  child: Text(_lastSexDate == null ? 'Last Sex Encounter' : _lastSexDate!.toLocal().toString().split(' ')[0]),
                 ),
                 TextButton(
                   onPressed: _disableLastSex ? null : () => _selectDate(context),
-                  child: const Text('Pick Date'),
+                  child: const Text('Select Date'),
                 ),
               ]),
               CheckboxListTile(
-                title: const Text('Disable Date of Last Sexual Encounter'),
+                title: const Text('Disable Date'),
                 value: _disableLastSex,
                 onChanged: (v) => setState(() => _disableLastSex = v!),
               ),
-              TextFormField(controller: _menstrualHistory, decoration: const InputDecoration(labelText: 'Menstrual History')),
-              TextFormField(controller: _pregnancyHistory, decoration: const InputDecoration(labelText: 'Pregnancy History')),
-              const SizedBox(height: 20),
 
-              const Text('Laboratory Tests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              TextFormField(controller: _bloodTestsController, decoration: const InputDecoration(labelText: 'Blood Tests')),
-              TextFormField(controller: _urinalTestsController, decoration: const InputDecoration(labelText: 'Urinal Tests')),
-              TextFormField(controller: _swabTestsController, decoration: const InputDecoration(labelText: 'Swab Tests')),
-              TextFormField(controller: _papSmearController, decoration: const InputDecoration(labelText: 'Pap Smear')),
-              TextFormField(controller: _physicalExamController, decoration: const InputDecoration(labelText: 'Physical Examination Findings')),
-              TextFormField(controller: _semenalysisController, decoration: const InputDecoration(labelText: 'Semenalysis')),
-              TextFormField(controller: _infectionStatusController, decoration: const InputDecoration(labelText: 'Infection Status')),
-              
-              const SizedBox(height: 20),
-              TextFormField(controller: _sexPartnerController, decoration: InputDecoration(labelText: 'Number of Sexual Partners'), keyboardType: TextInputType.number),
-              TextFormField(controller: _contraceptivesController, decoration: InputDecoration(labelText: 'Use of Contraceptives')),
-              TextFormField(controller: _unprotectedSexController, decoration: InputDecoration(labelText: 'History of Unprotected Sex')),
-              Row(
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
                 children: [
-                  Expanded(
-                    child: Text(_lastSexDate == null
-                        ? 'Select Date of Last Sexual Encounter'
-                        : 'Selected: ${_lastSexDate!.toLocal()}'.split(' ')[0]),
-                  ),
-                  Checkbox(
-                    value: _isNoSexChecked,
-                    onChanged: (val) {
-                      setState(() {
-                        _isNoSexChecked = val!;
-                        if (_isNoSexChecked) _lastSexEnDate = null;
-                      });
-                    },
-                  ),
-                  const Text('None/No'),
-                  IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: _isNoSexChecked
-                        ? null
-                        : () async {
-                            DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(1900),
-                              lastDate: DateTime.now(),
-                            );
-                            if (picked != null) setState(() => _lastSexDate = picked);
-                          },
-                  ),
-                ],
+                  SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Menstrual History', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _menstrualHistory, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Pregnancy History', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _pregnancyHistory, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+              
+              SizedBox(height: screenHeight * 0.02),
+                                Text(
+                                  'III. Laboratory and Diagnostic Tests',
+                                  style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'OpenSansEB',
+                                  ),
+                                ),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Blood Tests', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _bloodTestsController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Urinal Test', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _urinalTestsController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Swab Test', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _swabTestsController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Pap Smear', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _papSmearController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
               ),
 
-              const SizedBox(height: 20),
-              TextFormField(controller: _painController, decoration: InputDecoration(labelText: 'Pain or Discomfort')),
-              TextFormField(controller: _dischargeController, decoration: InputDecoration(labelText: 'Abnormal Discharge')),
-              TextFormField(controller: _urinaryProblemController, decoration: InputDecoration(labelText: 'Urinary Problem')),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Physical Examination Findings', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _physicalExamController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Semenalysis', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _semenalysisController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Infection Status', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _infectionStatusController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+
+              SizedBox(height: screenHeight * 0.02),
+                                Text(
+                                  'IV. Symptoms and Current Complaints',
+                                  style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'OpenSansEB'
+                                  ),
+                                ),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Pain or Discomfort', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _painController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Abnormal Discharge', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _dischargeController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Urinary Problem', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _urinaryProblemController, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+
               Text('Select Symptoms:', style: TextStyle(fontWeight: FontWeight.bold)),
               Wrap(
                 spacing: 8.0,
@@ -254,10 +587,62 @@ void _submitFirstForm() async { // <--- Make the function async
               ),
 
               const SizedBox(height: 30),
+              Container(
+                width: screenWidth,
+                height: screenHeight * 0.1,
+                child: Wrap(
+                  spacing: responsiveSpacing,
+                  runSpacing: responsiveRunSpacing,
+                  children: [
+                ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color.fromRGBO(247, 198, 226, 1),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                            side: BorderSide(
+                                              color: const Color.fromARGB(255, 255, 255, 255),
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                child: Text('Cancel'),
+              ),
               ElevatedButton(
                 onPressed: _submitFirstForm,
+                style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color.fromRGBO(247, 198, 226, 1),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                            side: BorderSide(
+                                              color: Colors.green.shade900,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
                 child: const Text('Continue'),
               ),
+                  ],
+                )
+              )
+
+                    ],
+                    ),
+                  ),
+                ),
+              
             ],
           ),
         ),

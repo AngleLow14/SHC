@@ -13,8 +13,9 @@ class AppointmentPage extends StatefulWidget {
 
 class _AppointmentPageState extends State<AppointmentPage> {
   final supabase = Supabase.instance.client;
-  List<dynamic> appointments = [];
-  bool isLoading = true;
+  List<Map<String, dynamic>> appointments = [];
+  List<Map<String, dynamic>> filteredAppointments = [];
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -25,52 +26,48 @@ class _AppointmentPageState extends State<AppointmentPage> {
   Future<void> fetchAppointments() async {
     final response = await supabase
         .from('appointment')
-        .select()
+        .select('id, appointment_date, type_of_patient, purpose, status, patient_id, patient (patient_number)')
         .order('appointment_date', ascending: true);
 
+    final List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(response);
+
     setState(() {
-      appointments = response;
-      isLoading = false;
+      appointments = data;
+      filteredAppointments = appointments;
     });
+  }
+
+  void filterSearch(String query) {
+    final lowerQuery = query.toLowerCase();
+    setState(() {
+      searchQuery = query;
+      filteredAppointments = appointments.where((appointment) {
+        final patientNumber = appointment['patient']?['patient_number']?.toString().toLowerCase() ?? '';
+        return patientNumber.contains(lowerQuery);
+      }).toList();
+    });
+  }
+
+  void handleCheckAction(int appointmentId) async {
+    await supabase
+        .from('appointment')
+        .update({'status': 'Checked'})
+        .eq('id', appointmentId);
+    fetchAppointments();
+  }
+
+  void handleCrossAction(int appointmentId) async {
+    await supabase
+        .from('appointment')
+        .update({'status': 'Cancelled'})
+        .eq('id', appointmentId);
+    fetchAppointments();
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
-    Widget buildHeaderCell(String text) {
-      return Container(
-        height: 50,
-        alignment: Alignment.center,
-        color: const Color.fromARGB(255, 241, 241, 241),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 15,
-            fontFamily: 'OpenSansEB',
-            color: Colors.black,
-          ),
-        ),
-      );
-    }
-
-    Widget buildDataCell(String text) {
-      return Container(
-        alignment: Alignment.center,
-        color: Colors.white,
-        height: 50,
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'OpenSansLight',
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: Colors.black,
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       body: SafeArea(
@@ -266,92 +263,80 @@ class _AppointmentPageState extends State<AppointmentPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
-                    hintText: 'Search...',
+                    hintText: 'Search Patient ID',
                   ),
+                  onChanged: filterSearch,
                 ),
               ),
             ],
           ),
           SizedBox(height: screenHeight * 0.05),
 
-          // This was incorrectly labeled as `body:`
-          Expanded(
-            child: isLoading
-                ? Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Table(
-                        border: TableBorder.all(color: Colors.black),
-                        columnWidths: {
-                          0: FixedColumnWidth(screenWidth * 0.15),
-                          1: FixedColumnWidth(screenWidth * 0.15),
-                          2: FixedColumnWidth(screenWidth * 0.1),
-                          3: FixedColumnWidth(screenWidth * 0.1),
-                          4: FixedColumnWidth(screenWidth * 0.1),
-                          5: FixedColumnWidth(screenWidth * 0.1),
-                        },
-                        children: [
-                          // Header Row
+            Center(
+              child: Container(
+                height: screenHeight * 0.7,
+                width: screenWidth * 0.65,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: Table(
+                      border: TableBorder.all(color: Colors.black12),
+                      columnWidths: {
+                        0: FixedColumnWidth(screenWidth * 0.1), // Patient ID
+                        1: FixedColumnWidth(screenWidth * 0.15), // Appointment Date
+                        2: FixedColumnWidth(screenWidth * 0.13), // Type of Patient
+                        3: FixedColumnWidth(screenWidth * 0.1), // Purpose
+                        4: FixedColumnWidth(screenWidth * 0.13), // Action
+                      },
+                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                      children: [
+                        // Header row
+                        TableRow(
+                          decoration: const BoxDecoration(color: Color(0xFFE0E0E0)),
+                          children: [
+                            Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Patient ID', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18)))),
+                            Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Appointment Date', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18)))),
+                            Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Type of Patient', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18)))),
+                            Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Purpose', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18)))),
+                            Center(child: Padding(padding: EdgeInsets.all(8), child: Text('Action', style: TextStyle(fontFamily: 'OpenSansEB', fontSize: 18)))),
+                          ],
+                        ),
+
+                        // Data rows
+                        for (var appointment in filteredAppointments)
                           TableRow(
-                            decoration:
-                                BoxDecoration(color: Colors.grey[300]),
+                            decoration: const BoxDecoration(color: Colors.white),
                             children: [
-                              buildHeaderCell('Patient ID'),
-                              buildHeaderCell('Appointment Date'),
-                              buildHeaderCell('Type'),
-                              buildHeaderCell('Purpose'),
-                              buildHeaderCell('Note'),
-                              buildHeaderCell('Action'),
+                              Center(child: Padding(padding: EdgeInsets.all(8), child: Text(appointment['patient']?['patient_number'] ?? 'N/A', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)))),
+                              Center(child: Padding(padding: EdgeInsets.all(8), child: Text(appointment['appointment_date'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)))),
+                              Center(child: Padding(padding: EdgeInsets.all(8), child: Text(appointment['type_of_patient'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)))),
+                              Center(child: Padding(padding: EdgeInsets.all(8), child: Text(appointment['purpose'] ?? '', style: TextStyle(fontFamily: 'OpenSansSB', fontSize: 15)))),
+                              Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.check, color: Colors.green),
+                                      onPressed: () => handleCheckAction(appointment['id']),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.clear, color: Colors.red),
+                                      onPressed: () => handleCrossAction(appointment['id']),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
-                          // Dynamic Rows
-                          ...appointments.map((appointment) {
-                            return TableRow(
-                              children: [
-                                buildDataCell(
-                                    appointment['patient_id'] ?? 'N/A'),
-                                buildDataCell(
-                                    appointment['appointment_date'] ?? 'N/A'),
-                                buildDataCell(
-                                    appointment['type_of_patient'] ?? 'N/A'),
-                                buildDataCell(
-                                    appointment['purpose'] ?? 'N/A'),
-                                buildDataCell(appointment['note'] ?? 'N/A'),
-                                Container(
-                                  alignment: Alignment.center,
-                                  height: 50,
-                                  color: Colors.white,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.check,
-                                            color: Colors.green),
-                                        onPressed: () {
-                                          // Confirm logic
-                                        },
-                                      ),
-                                      SizedBox(width: 8),
-                                      IconButton(
-                                        icon:
-                                            Icon(Icons.clear, color: Colors.red),
-                                        onPressed: () {
-                                          // Reject logic
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-          ),
+                ),
+              ),
+            )
+
+
         ],
       ),
     ),

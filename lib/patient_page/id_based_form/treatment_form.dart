@@ -133,9 +133,14 @@ class _TreatmState extends State<Treatment> {
 
   @override
   Widget build(BuildContext ctx) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    double responsiveSpacing = 20.0;
+    double responsiveRunSpacing = 10.0;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Treatment & Diagnosis'),
+        title: Text('Treatment & Diagnosis'),
         leading: BackButton(onPressed: () => Navigator.pop(ctx)),
       ),
       body: Padding(
@@ -144,39 +149,98 @@ class _TreatmState extends State<Treatment> {
           key: _formKey,
           child: ListView(
             children: [
-              const Text('Treatment Plan', style: TextStyle(fontWeight: FontWeight.bold)),
+              Container(
+                  height: screenHeight * 0.1,
+                  width: screenWidth,
+                  color: Color.fromARGB(255, 255, 245, 245),
+                  child: Center(
+                    child: Text(
+                      '2 OUT OF 2',
+                      style: TextStyle(fontSize: 15, color: Color.fromARGB(255, 0, 0, 0), fontFamily: 'Italic',),
+                    ),
+                  ),
+                ),
+                Container(
+                  height: screenHeight,
+                  width: screenWidth * 0.9,
+                  color: Color.fromARGB(255, 255, 255, 255),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
 
-              TextFormField(
-                controller: _prescription,
-                decoration: const InputDecoration(labelText: 'Prescription'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+                        Text('V. Treatment', style: TextStyle(fontSize: 20, fontFamily: 'OpenSansEB', color: Colors.black)),
+              
+              SizedBox(height: screenHeight * 0.02,),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.2,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Prescription', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _prescription, validator: (value) => value!.isEmpty ? 'Required' : null, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
               ),
-              TextFormField(
-                controller: _quantity,
-                decoration: const InputDecoration(labelText: 'Quantity'),
-                keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? 'Required' : null,
               ),
-              TextFormField(
-                controller: _frequency,
-                decoration: const InputDecoration(labelText: 'Frequency'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Quantity', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _quantity, validator: (value) => value!.isEmpty ? 'Required' : null, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
               ),
-              const SizedBox(height: 10),
+              ),
+              SizedBox(
+                    width: screenWidth * 0.15,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Frequency', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _frequency, validator: (value) => value!.isEmpty ? 'Required' : null, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
+              ),
+
+              
+              SizedBox(height: screenHeight * 0.02,),
               CheckboxListTile(
-                title: const Text('For Referral'),
+                title: Text('For Referral'),
                 value: _forReferral,
                 onChanged: (v) => setState(() => _forReferral = v!),
               ),
+
+              SizedBox(height: screenHeight * 0.02,),
               CheckboxListTile(
-                title: const Text('Active'),
+                title: Text('Active'),
                 value: _active,
                 onChanged: (v) => setState(() => _active = v!),
               ),
+
+              SizedBox(height: screenHeight * 0.02,),
               Row(
                 children: [
-                  const Text('Follow-up Date:'),
-                  const SizedBox(width: 10),
+                 Text('Follow-up Date:'),
+                 SizedBox(width: 10),
                   Text(_followUpDate == null
                       ? 'Not selected'
                       : _followUpDate!.toLocal().toString().split(' ')[0]),
@@ -186,34 +250,57 @@ class _TreatmState extends State<Treatment> {
                   ),
                 ],
               ),
+
+              SizedBox(height: screenHeight * 0.02,),
               Row(
                 children: [
-                  const Text('Validity Date:'),
-                  const SizedBox(width: 10),
+                 Text('Validity Date:'),
+                 SizedBox(width: 10),
                   Text(_validityDate == null
                       ? 'Not selected'
                       : _validityDate!.toLocal().toString().split(' ')[0]),
                   IconButton(
-                    icon: const Icon(Icons.calendar_today),
+                    icon: Icon(Icons.calendar_today),
                     onPressed: _selectValidityDate,
                   ),
                 ],
               ),
 
-              const SizedBox(height: 20),
-              const Text('Diagnosis', style: TextStyle(fontWeight: FontWeight.bold)),
-              TextFormField(
-                controller: _diagnosisInfo,
-                decoration: const InputDecoration(labelText: 'Diagnosis Information'),
-                maxLines: 3,
-                validator: (value) => value!.isEmpty ? 'Required' : null,
+              SizedBox(height: screenHeight * 0.02,),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.3,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Diagnosis Information', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.1,
+                child: TextFormField(controller: _diagnosisInfo, maxLines: 3, validator: (value) => value!.isEmpty ? 'Required' : null, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
               ),
+              ),
+              ]
+              ),
+                
 
-              const SizedBox(height: 30),
+              SizedBox(height: screenHeight * 0.03,),
               ElevatedButton(
                 onPressed: _submitAll,
-                child: const Text('Submit All'),
+                child: Text('Submit All'),
               ),
+
+                      ],
+                    ),
+                  ) 
+
+                ),
+
             ],
           ),
         ),

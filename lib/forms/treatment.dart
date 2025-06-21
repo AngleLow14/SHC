@@ -102,29 +102,83 @@ class _TreatmState extends State<Treatment> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    double responsiveSpacing = 20.0;
+    double responsiveRunSpacing = 10.0;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Treatment Plan'),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const Text(
-                'Patient Information:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Container(
+                  height: screenHeight * 0.07,
+                  width: screenWidth,
+                  child: Center(
+                    child: Text(
+                      '2 OUT OF 2',
+                      style: TextStyle(fontSize: 15, color: const Color.fromARGB(255, 0, 0, 0), fontFamily: 'Italic',),
+                    ),
+                  ),
+                ),
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  Container(
+                    width: screenWidth * 0.2,
+                    height: screenHeight * 0.1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                        'Patient Name:',
+                        style: TextStyle(fontSize: 15, fontFamily: 'OpenSansEB', color: Colors.black),
+                      ),
+                      Text(
+                        '${widget.patientData['first_name']} ${widget.patientData['last_name']}',
+                        style: TextStyle(fontSize: 12, fontFamily: 'OpenSansSB', color: Colors.black),
+                      ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: screenWidth * 0.2,
+                    height: screenHeight * 0.1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                        'Patient Number:',
+                        style: TextStyle(fontSize: 15, fontFamily: 'OpenSansEB', color: Colors.black),
+                      ),
+                      Text(
+                        '${widget.patientData['patient_number']}',
+                        style: TextStyle(fontSize: 12, fontFamily: 'OpenSansSB', color: Colors.black),
+                      ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Text('Name: ${widget.patientData['first_name']} ${widget.patientData['last_name']}'),
-              Text('Patient Number: ${widget.patientData['patient_number']}'),
-              const SizedBox(height: 20),
-              const Text(
-                'Treatment Details:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              ListView.builder(
+              Container(
+                width: screenWidth * 0.8,
+                height: screenHeight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                      Text(
+                      'VI. Treatment',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+
+                    ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _prescriptionControllers.length,
@@ -175,6 +229,8 @@ class _TreatmState extends State<Treatment> {
                   );
                 },
               ),
+              
+              SizedBox(height: screenHeight * 0.02),
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
@@ -183,6 +239,7 @@ class _TreatmState extends State<Treatment> {
                   label: const Text('Add Prescription'),
                 ),
               ),
+              SizedBox(height: screenHeight * 0.02),
               Row(
                 children: [
                   Checkbox(
@@ -193,9 +250,10 @@ class _TreatmState extends State<Treatment> {
                       });
                     },
                   ),
-                  const Text('For Referral'),
+                  const Text('For Referral (Check If Yes)'),
                 ],
               ),
+              SizedBox(height: screenHeight * 0.02),
               InkWell(
                 onTap: () => _selectFollowUpDate(context),
                 child: InputDecorator(
@@ -216,6 +274,7 @@ class _TreatmState extends State<Treatment> {
                   ),
                 ),
               ),
+              SizedBox(height: screenHeight * 0.02),
               InkWell(
                 onTap: () => _selectValidityDate(context),
                 child: InputDecorator(
@@ -236,6 +295,7 @@ class _TreatmState extends State<Treatment> {
                   ),
                 ),
               ),
+              SizedBox(height: screenHeight * 0.02),
               Row(
                 children: [
                   Checkbox(
@@ -249,13 +309,28 @@ class _TreatmState extends State<Treatment> {
                   const Text('Active (Yes/No)'),
                 ],
               ),
-              TextFormField(
-                controller: _diagnosisInfController,
-                decoration: const InputDecoration(labelText: 'Diagnosis Information'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+
+              Wrap(
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
+                  SizedBox(
+                    width: screenWidth * 0.3,
+                    child: Column(
+                      crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+              Text('Diagnosis Information', style: TextStyle(fontSize: 15,color: Colors.black,),),
+              SizedBox(
+                height: screenHeight * 0.06,
+                child: TextFormField(controller: _diagnosisInfController, validator: (value) => value == null || value.isEmpty ? 'Required' : null, style: TextStyle(fontSize: 12, color: Colors.black), decoration: InputDecoration(filled: true, fillColor: Colors.white, border: OutlineInputBorder( borderRadius: BorderRadius.circular(5.0,),),),),
+                ),
+                ]
+              ),
+              ),
+              ]
               ),
 
-              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
@@ -312,6 +387,14 @@ class _TreatmState extends State<Treatment> {
                   ),
                 ],
               ),
+
+
+                    ],
+                  ),
+                ),
+              ),
+              
+              
               const SizedBox(height: 20),
               const Text(
                 'Recent Data Input:',

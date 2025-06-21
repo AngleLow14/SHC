@@ -150,7 +150,7 @@ class _MedRecord extends State<AddMedicalRecord> {
                 ),
                 SizedBox(
                   height: screenHeight * 0.07,
-                  width: screenWidth * 1,
+                  width: screenWidth,
                   child: Center(
                     child: Text(
                       '1 OUT OF 2',
@@ -1873,8 +1873,9 @@ class _MedRecord extends State<AddMedicalRecord> {
                                       ),
                                     ),
                                   ],
-                                ),    
-                        
+                                ), 
+                                SizedBox(height: screenHeight * 0.02,),   
+                                Text("Note: Check the infromation you enter before you proceed.", style: TextStyle(fontSize: 10, color: const Color.fromARGB(255, 43, 43, 43)),),
                                 SizedBox(height: screenHeight * 0.02),
                                 Wrap(
                                   spacing: responsiveSpacing,

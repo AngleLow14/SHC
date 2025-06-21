@@ -28,7 +28,6 @@ class _ViewDetailsState extends State<ViewDetails> {
   }
 
   Future<void> _fetchMedicalRecords() async {
-    // Fetch all data concurrently
     final results = await Future.wait([
       supabase.from('laboratory_test').select().eq('patient_id', widget.data['patient_id']).order('date', ascending: false).limit(1),
       supabase.from('sexual_and_reproductive_health').select().eq('patient_id', widget.data['patient_id']).order('date', ascending: false).limit(1),
@@ -84,29 +83,36 @@ class _ViewDetailsState extends State<ViewDetails> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Center(
-                                  child: Text(
+                                Container(
+                                  width: screenWidth,
+                                  height: screenHeight * 0.1,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                  Text(
                                   '${history['date'] ?? 'N/A'}',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
                                   ),
                                 ),
-                                ),
-                                SizedBox(height: screenHeight * 0.02),
-                                Center(
-                                  child: Text(
+                                Text(
                                   'Medical History',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
                                   ),
                                 ),
+                                    ],
+                                  ),
                                 ),
+                                
+                                SizedBox(height: screenHeight * 0.02),
+                                
                                 const SizedBox(height: 8),
                                 _diagnosis == null
                                     ? const Text('No diagnosis records found.')
@@ -117,7 +123,7 @@ class _ViewDetailsState extends State<ViewDetails> {
                                   child: Text(
                                   'Diagnosis',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
@@ -324,7 +330,7 @@ class _ViewDetailsState extends State<ViewDetails> {
                                   child: Text(
                                   'Sexual and Reproductive Health History',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
@@ -523,7 +529,7 @@ class _ViewDetailsState extends State<ViewDetails> {
                                   child: Text(
                                   'Symptoms and Current Complaint',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
@@ -666,7 +672,7 @@ class _ViewDetailsState extends State<ViewDetails> {
                                   child: Text(
                                   'Laboratory and Diagnostic Tests',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',
@@ -892,7 +898,7 @@ class _ViewDetailsState extends State<ViewDetails> {
                                   child: Text(
                                   'Treatment and Follow Up Plan',
                                   style: TextStyle(
-                                    fontSize: 25,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                     fontFamily: 'OpenSansEB',

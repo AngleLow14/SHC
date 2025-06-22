@@ -166,6 +166,7 @@ class _TreatmState extends State<Treatment> {
                   color: Color.fromARGB(255, 255, 255, 255),
                   child: SingleChildScrollView(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
 

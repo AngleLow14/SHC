@@ -987,7 +987,7 @@ class _MedRecord extends State<AddMedicalRecord> {
                                       ),
                                     ),
                                     SizedBox(
-                                      width: screenWidth * 0.15,
+                                      width: screenWidth * 0.2,
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,

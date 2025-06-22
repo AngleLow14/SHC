@@ -132,8 +132,11 @@ void _submitFirstForm() async { // <--- Make the function async
     double responsiveSpacing = 20.0;
     double responsiveRunSpacing = 10.0;
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Container(
+          height: screenHeight,
+          width: screenWidth,
+          color: Colors.white,
         child: Form(
           key: _formKey,
           child: Column(
@@ -151,11 +154,12 @@ void _submitFirstForm() async { // <--- Make the function async
                   ),
                 ),
                 Container(
-                  height: screenHeight,
+                  height: screenHeight * 0.85,
                   width: screenWidth * 0.9,
                   color: Colors.white,
                   child: SingleChildScrollView(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
 
@@ -252,11 +256,11 @@ void _submitFirstForm() async { // <--- Make the function async
                 ]
               ),
               ),
+              CheckboxListTile(title: const Text('STI History'), value: _stiYes, onChanged: (v) => setState(() => _stiYes = v!)),
               ]
               ),
               
-              CheckboxListTile(title: const Text('STI History'), value: _stiYes, onChanged: (v) => setState(() => _stiYes = v!)),
-              const SizedBox(height: 20),
+              
 
               SizedBox(height: screenHeight * 0.02),
                                 Text(
@@ -332,17 +336,21 @@ void _submitFirstForm() async { // <--- Make the function async
               ]
               ),
 
-              Row(children: [
+              SizedBox(height: screenHeight * 0.02),
+              Wrap(                
+                spacing: responsiveSpacing,
+                runSpacing: responsiveRunSpacing,
+                children: [
                 Expanded(
-                  child: Text(_lastSexDate == null ? 'Last Sex Encounter' : _lastSexDate!.toLocal().toString().split(' ')[0]),
+                  child: Text(_lastSexDate == null ? 'No Date Selected' : _lastSexDate!.toLocal().toString().split(' ')[0]),
                 ),
                 TextButton(
                   onPressed: _disableLastSex ? null : () => _selectDate(context),
-                  child: const Text('Select Date'),
+                  child: const Text('Pick Date'),
                 ),
               ]),
               CheckboxListTile(
-                title: const Text('Disable Date'),
+                title: const Text('Disable Date of Last Sexual Encounter'),
                 value: _disableLastSex,
                 onChanged: (v) => setState(() => _disableLastSex = v!),
               ),
@@ -646,7 +654,7 @@ void _submitFirstForm() async { // <--- Make the function async
             ],
           ),
         ),
-
+      ),
       ),
     );
   }
